@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 音乐相似度检索系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1 { text-align: center; color: #409EFF; }
+        .upload-btn { background: #409EFF; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .upload-btn:hover { background: #66b1ff; }
+        .search-btn { background: #67C23A; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 15px; width: 100%; }
+        .search-btn:disabled { background: #a0cfff; cursor: not-allowed; }
+        #waveform { margin-top: 15px; background: #fafafa; border: 1px solid #ebeef5; border-radius: 5px; }
+        .result-item { border-bottom: 1px solid #ebeef5; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
+        .result-item:last-child { border-bottom: none; }
+        .rank { font-size: 24px; font-weight: bold; color: #E6A23C; margin-right: 15px; }
+        .song-info h3 { margin: 0 0 5px 0; color: #303133; }
+        .song-info p { margin: 0; color: #909399; font-size: 14px; }
+        .score { font-size: 14px; background: #ecf5ff; color: #409EFF; padding: 5px 10px; border-radius: 15px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>🎵 AI 音乐相似度检索系统</h1>
+
+        <div class="card">
+            <h3>第一步：上传待检索音频</h3>
+            <input type="file" @change="handleFileUpload" accept="audio/*" style="display: none;" ref="fileInput">
+            <button class="upload-btn" @click="$refs.fileInput.click()">选择音频文件</button>
+            <span v-if="selectedFile" style="margin-left: 15px; color: #606266;">{{ selectedFile.name }}</span>
+
+            <div id="waveform"></div>
+
+            <button class="search-btn" :disabled="!selectedFile || isSearching" @click="searchMusic">
+                {{ isSearching ? '🧠 AI 正在极速检索中...' : '开始检索相似歌曲' }}
+            </button>
+        </div>
+
+        <div class="card" v-if="results.length > 0">
+            <h3>检索结果 (Top {{ results.length }})</h3>
+            <div class="result-item" v-for="res in results" :key="res.rank">
+                <div style="display: flex; align-items: center;">
+                    <div class="rank">#{{ res.rank }}</div>
+                    <div class="song-info">
+                        <h3>{{ res.title }}</h3>
+                        <p>歌手: {{ res.artist }}</p>
+                    </div>
+                </div>
+                <div class="score">哈希差异: {{ res.distance }} bit</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const selectedFile = ref(null);
+                const isSearching = ref(false);
+                const results = ref([]);
+                let wavesurfer = null;
+
+                // 初始化波形播放器
+                onMounted(() => {
+                    wavesurfer = WaveSurfer.create({
+                        container: '#waveform',
+                        waveColor: '#409EFF',
+                        progressColor: '#0052d9',
+                        height: 80,
+                        barWidth: 2,
+                        barRadius: 2,
+                        cursorWidth: 1,
+                    });
+
+                    // 点击波形可以播放/暂停
+                    wavesurfer.on('click', () => {
+                        wavesurfer.playPause();
+                    });
+                });
+
+                // 处理文件上传并绘制波形
+                const handleFileUpload = (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        selectedFile.value = file;
+                        results.value = []; // 清空上次结果
+                        // 生成本地 URL 并让 wavesurfer 读取
+                        const objectUrl = URL.createObjectURL(file);
+                        wavesurfer.load(objectUrl);
+                    }
+                };
+
+                // 发送请求给 FastAPI 后端
+                const searchMusic = async () => {
+                    if (!selectedFile.value) return;
+
+                    isSearching.value = true;
+                    // 使用 FormData 封装文件 [cite: 138]
+                    const formData = new FormData();
+                    formData.append('file', selectedFile.value);
+
+                    try {
+                        // 请求你刚刚跑通的本地 8000 端口
+                        const response = await axios.post('http://127.0.0.1:8000/search', formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' }
+                        });
+
+                        if (response.data.code === 200) {
+                            results.value = response.data.data;
+                        } else {
+                            alert("检索出错: " + response.data.message);
+                        }
+                    } catch (error) {
+                        console.error("网络请求失败:", error);
+                        alert("无法连接到后端服务器，请确保 main.py 正在运行！");
+                    } finally {
+                        isSearching.value = false;
+                    }
+                };
+
+                return {
+                    selectedFile,
+                    isSearching,
+                    results,
+                    handleFileUpload,
+                    searchMusic
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
