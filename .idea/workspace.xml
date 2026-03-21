@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b7ebe285-6f88-49a9-84a3-c83eba23ee77" name="更改" comment="实现了工程链路（前端音频处理 -&gt; 特征提取流 -&gt; Faiss 检索-&gt;SQLite 数据库映射）的闭环。&#10;模型经过两次迭代，已初步具有效果，验证了模型在“位折叠”（白噪音）现象下的鲁棒性，但模型仍不完善，它现在只能完全按时间轴对齐，没有更灵活的匹配。考虑引入一些动态时间规整，比如DTW（动态时间规整）或者其他序列对齐方法，同时增大训练样本量，再配合一些注意力机制或者更复杂的神经网络架构，该模型距离实际可用还有一段距离。&#10;功能性：用户管理（查看识别记录）、跳转各大平台播放链接、相似推荐（网易云心动模式类似物）等等&#10;前端目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，力争界面优美，符合自我审美。">
+    <list default="true" id="b7ebe285-6f88-49a9-84a3-c83eba23ee77" name="更改" comment="新增功能：用户管理（注册、登录）、播放预览、歌曲收藏&#10;TODO：&#10;功能：识别历史记录&#10;前端:待美化&#10;目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，模仿https://bewild.ai/的主页、登录弹窗风格">
       <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.ask2agent.xml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/music_hash.db" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/music_hash.index" afterDir="false" />
@@ -60,6 +60,12 @@
       <list>
         <option value="Evanesce" />
       </list>
+    </option>
+    <option name="PUSH_TAGS">
+      <GitPushTagMode>
+        <option name="argument" value="--tags" />
+        <option name="title" value="All" />
+      </GitPushTagMode>
     </option>
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
@@ -157,7 +163,15 @@
       <option name="project" value="LOCAL" />
       <updated>1773853367428</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="新增功能：用户管理（注册、登录）、播放预览、歌曲收藏&#10;TODO：&#10;功能：识别历史记录&#10;前端:待美化&#10;目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，模仿https://bewild.ai/的主页、登录弹窗风格">
+      <option name="closed" value="true" />
+      <created>1774083177010</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1774083177010</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -191,7 +205,8 @@
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="实现了工程链路（前端音频处理 -&gt; 特征提取流 -&gt; Faiss 检索-&gt;SQLite 数据库映射）的闭环。&#10;模型经过两次迭代，已初步具有效果，验证了模型在“位折叠”（白噪音）现象下的鲁棒性，但模型仍不完善，它现在只能完全按时间轴对齐，没有更灵活的匹配。考虑引入一些动态时间规整，比如DTW（动态时间规整）或者其他序列对齐方法，同时增大训练样本量，再配合一些注意力机制或者更复杂的神经网络架构，该模型距离实际可用还有一段距离。&#10;功能性：用户管理（查看识别记录）、跳转各大平台播放链接、相似推荐（网易云心动模式类似物）等等&#10;前端目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，力争界面优美，符合自我审美。" />
-    <option name="LAST_COMMIT_MESSAGE" value="实现了工程链路（前端音频处理 -&gt; 特征提取流 -&gt; Faiss 检索-&gt;SQLite 数据库映射）的闭环。&#10;模型经过两次迭代，已初步具有效果，验证了模型在“位折叠”（白噪音）现象下的鲁棒性，但模型仍不完善，它现在只能完全按时间轴对齐，没有更灵活的匹配。考虑引入一些动态时间规整，比如DTW（动态时间规整）或者其他序列对齐方法，同时增大训练样本量，再配合一些注意力机制或者更复杂的神经网络架构，该模型距离实际可用还有一段距离。&#10;功能性：用户管理（查看识别记录）、跳转各大平台播放链接、相似推荐（网易云心动模式类似物）等等&#10;前端目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，力争界面优美，符合自我审美。" />
+    <MESSAGE value="新增功能：用户管理（注册、登录）、播放预览、歌曲收藏&#10;TODO：&#10;功能：识别历史记录&#10;前端:待美化&#10;目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，模仿https://bewild.ai/的主页、登录弹窗风格" />
+    <option name="LAST_COMMIT_MESSAGE" value="新增功能：用户管理（注册、登录）、播放预览、歌曲收藏&#10;TODO：&#10;功能：识别历史记录&#10;前端:待美化&#10;目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，模仿https://bewild.ai/的主页、登录弹窗风格" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
