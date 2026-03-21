@@ -4,46 +4,48 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b7ebe285-6f88-49a9-84a3-c83eba23ee77" name="更改" comment="">
-      <changelist_data name="Evanesce" email="" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/music_search_experimental_field.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/000002_noisy_test.wav" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/batch_extract.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_1.pth" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_2.pth" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_3.pth" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_4.pth" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_5.pth" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/model.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/core/preprocess.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data/music_meta.db" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data/processed/all_music_hashes.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data/processed/file_mapping.npy" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data/raw/README.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/data/raw/checksums" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dataset.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/init_db.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/make_noise.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/model.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/outdated_tests/Derra,Drake,Rihanna - Work (Derra Flip).mp3" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/outdated_tests/Test_Mel_spec.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/outdated_tests/model.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/search.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/search_test.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_data.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
+    <list default="true" id="b7ebe285-6f88-49a9-84a3-c83eba23ee77" name="更改" comment="实现了工程链路（前端音频处理 -&gt; 特征提取流 -&gt; Faiss 检索-&gt;SQLite 数据库映射）的闭环。&#10;模型经过两次迭代，已初步具有效果，验证了模型在“位折叠”（白噪音）现象下的鲁棒性，但模型仍不完善，它现在只能完全按时间轴对齐，没有更灵活的匹配。考虑引入一些动态时间规整，比如DTW（动态时间规整）或者其他序列对齐方法，同时增大训练样本量，再配合一些注意力机制或者更复杂的神经网络架构，该模型距离实际可用还有一段距离。&#10;功能性：用户管理（查看识别记录）、跳转各大平台播放链接、相似推荐（网易云心动模式类似物）等等&#10;前端目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，力争界面优美，符合自我审美。">
+      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.ask2agent.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/music_hash.db" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/music_hash.index" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/fix_db_metadata.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/batch_extract.py" beforeDir="false" afterPath="$PROJECT_DIR$/batch_extract.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/hash_model_epoch_1.pth" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_1.pth" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/hash_model_epoch_2.pth" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_2.pth" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/hash_model_epoch_3.pth" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_3.pth" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/hash_model_epoch_4.pth" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_4.pth" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/checkpoints/hash_model_epoch_5.pth" beforeDir="false" afterPath="$PROJECT_DIR$/checkpoints/hash_model_epoch_5.pth" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataset.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/model.py" beforeDir="false" afterPath="$PROJECT_DIR$/model.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search.py" beforeDir="false" afterPath="$PROJECT_DIR$/search.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/search_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/search_test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/test_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_D:/pycharm_projects/music_search_experimental_field" value="3B48QrEF0C7aZzGxGfdlGCZNJzm" />
+    </persistenceIdMap>
+  </component>
+  <component name="CopilotUserSelectedChatMode">
+    <option name="chatModeId" value="Agent" />
+  </component>
+  <component name="CopilotUserSelectedModel">
+    <selectedModels>
+      <entry key="chat-panel" value="GPT-5 mini" />
+      <entry key="agent-panel" value="GPT-5 mini" />
+    </selectedModels>
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="8037" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -59,46 +61,73 @@
         <option value="Evanesce" />
       </list>
     </option>
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="SIGN_OFF_COMMIT" value="true" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;JOK1NG&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/JOK1NG/music-search-system.git&quot;,
+    &quot;accountId&quot;: &quot;c39153ed-74ae-489b-8800-ed3d4f8b3d9a&quot;
+  }
+}</component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
 }</component>
   <component name="ProjectId" id="3B48QrEF0C7aZzGxGfdlGCZNJzm" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+  <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;Python.batch_extract.executor&quot;: &quot;Run&quot;,
-    &quot;Python.dataset.executor&quot;: &quot;Run&quot;,
-    &quot;Python.init_db.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.make_noise.executor&quot;: &quot;Run&quot;,
-    &quot;Python.search.executor&quot;: &quot;Run&quot;,
-    &quot;Python.search_test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.train.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;settings.sync&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "DefaultHtmlFileTemplate": "HTML File",
+    "Python.batch_extract.executor": "Run",
+    "Python.dataset.executor": "Run",
+    "Python.fix_db_metadata.executor": "Run",
+    "Python.init_db.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.make_noise.executor": "Run",
+    "Python.search.executor": "Run",
+    "Python.search_test.executor": "Run",
+    "Python.test.executor": "Run",
+    "Python.test_data.executor": "Run",
+    "Python.train.executor": "Run",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "full__system",
+    "ignore.virus.scanning.warn.message": "true",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\pycharm_projects\music_search_experimental_field\utils" />
       <recent name="D:\pycharm_projects\music_search_experimental_field\data\raw" />
       <recent name="D:\pycharm_projects\music_search_experimental_field\outdated_tests" />
       <recent name="D:\pycharm_projects\music_search_experimental_field" />
@@ -107,7 +136,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-50da183f06c8-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.13135.95" />
+        <option value="bundled-python-sdk-2653e85de345-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.31033.139" />
       </set>
     </attachedChunks>
   </component>
@@ -120,6 +149,15 @@
       <option name="presentableId" value="Default" />
       <updated>1773736969118</updated>
     </task>
+    <task id="LOCAL-00001" summary="实现了工程链路（前端音频处理 -&gt; 特征提取流 -&gt; Faiss 检索-&gt;SQLite 数据库映射）的闭环。&#10;模型经过两次迭代，已初步具有效果，验证了模型在“位折叠”（白噪音）现象下的鲁棒性，但模型仍不完善，它现在只能完全按时间轴对齐，没有更灵活的匹配。考虑引入一些动态时间规整，比如DTW（动态时间规整）或者其他序列对齐方法，同时增大训练样本量，再配合一些注意力机制或者更复杂的神经网络架构，该模型距离实际可用还有一段距离。&#10;功能性：用户管理（查看识别记录）、跳转各大平台播放链接、相似推荐（网易云心动模式类似物）等等&#10;前端目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，力争界面优美，符合自我审美。">
+      <option name="closed" value="true" />
+      <created>1773853367428</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1773853367428</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -127,7 +165,24 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="CUSTOM_BOOLEAN_PROPERTIES">
+                <map>
+                  <entry key="Show.Git.Branches" value="true" />
+                </map>
+              </option>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="origin/full_system" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
@@ -135,5 +190,15 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+    <MESSAGE value="实现了工程链路（前端音频处理 -&gt; 特征提取流 -&gt; Faiss 检索-&gt;SQLite 数据库映射）的闭环。&#10;模型经过两次迭代，已初步具有效果，验证了模型在“位折叠”（白噪音）现象下的鲁棒性，但模型仍不完善，它现在只能完全按时间轴对齐，没有更灵活的匹配。考虑引入一些动态时间规整，比如DTW（动态时间规整）或者其他序列对齐方法，同时增大训练样本量，再配合一些注意力机制或者更复杂的神经网络架构，该模型距离实际可用还有一段距离。&#10;功能性：用户管理（查看识别记录）、跳转各大平台播放链接、相似推荐（网易云心动模式类似物）等等&#10;前端目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，力争界面优美，符合自我审美。" />
+    <option name="LAST_COMMIT_MESSAGE" value="实现了工程链路（前端音频处理 -&gt; 特征提取流 -&gt; Faiss 检索-&gt;SQLite 数据库映射）的闭环。&#10;模型经过两次迭代，已初步具有效果，验证了模型在“位折叠”（白噪音）现象下的鲁棒性，但模型仍不完善，它现在只能完全按时间轴对齐，没有更灵活的匹配。考虑引入一些动态时间规整，比如DTW（动态时间规整）或者其他序列对齐方法，同时增大训练样本量，再配合一些注意力机制或者更复杂的神经网络架构，该模型距离实际可用还有一段距离。&#10;功能性：用户管理（查看识别记录）、跳转各大平台播放链接、相似推荐（网易云心动模式类似物）等等&#10;前端目标：实现类似Shazam的动效和实现Codex首页/Antigravity的首页鼠标移动动效，力争界面优美，符合自我审美。" />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
   </component>
 </project>

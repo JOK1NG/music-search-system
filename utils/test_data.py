@@ -3,7 +3,7 @@ import librosa
 import numpy as np
 
 # 配置路径
-RAW_DATA_PATH = "./data/raw"
+RAW_DATA_PATH = "../data/raw"
 
 
 def scan_music_files(root_path):

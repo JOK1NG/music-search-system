@@ -2,8 +2,8 @@ import faiss
 import numpy as np
 
 # 1. 加载打包后的数据
-fingerprints = np.load("./data/processed/all_music_hashes.npy")
-mapping = np.load("./data/processed/file_mapping.npy")
+fingerprints = np.load("../data/processed/all_music_hashes.npy")
+mapping = np.load("../data/processed/file_mapping.npy")
 
 # 2. 初始化索引：128 是指位宽 (Bits)，不是字节数
 index = faiss.IndexBinaryFlat(128)

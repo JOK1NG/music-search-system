@@ -3,30 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 音乐相似度检索系统</title>
+    <title>AI 音乐相似度检索系统 - 终极版</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f7fa; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
         .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h1 { text-align: center; color: #409EFF; }
-        .upload-btn { background: #409EFF; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
-        .upload-btn:hover { background: #66b1ff; }
-        .search-btn { background: #67C23A; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 15px; width: 100%; }
+
+        /* 导航栏 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #409EFF; font-size: 28px; }
+        .user-actions button { margin-left: 10px; padding: 6px 15px; border-radius: 20px; border: 1px solid #409EFF; background: transparent; color: #409EFF; cursor: pointer; transition: 0.3s; }
+        .user-actions button:hover { background: #409EFF; color: white; }
+        .btn-fav { border-color: #F56C6C !important; color: #F56C6C !important; font-weight: bold; }
+        .btn-fav:hover { background: #F56C6C !important; color: white !important; }
+
+        /* 弹窗通用样式 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 10px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 80vh; overflow-y: auto; }
+        .modal-content.wide { width: 500px; } /* 收藏夹宽一点 */
+        .modal-content input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #dcdfe6; border-radius: 5px; box-sizing: border-box; outline: none; }
+
+        /* 按钮与表单 */
+        .auth-btn { width: 100%; padding: 10px; background: #409EFF; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-bottom: 10px; }
+        .toggle-text { text-align: center; color: #909399; font-size: 14px; cursor: pointer; margin: 0; }
+        .upload-btn, .search-btn { color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .upload-btn { background: #409EFF; }
+        .search-btn { background: #67C23A; margin-top: 15px; width: 100%; }
         .search-btn:disabled { background: #a0cfff; cursor: not-allowed; }
         #waveform { margin-top: 15px; background: #fafafa; border: 1px solid #ebeef5; border-radius: 5px; }
-        .result-item { border-bottom: 1px solid #ebeef5; padding: 15px 0; display: flex; justify-content: space-between; align-items: center; }
+
+        /* 列表项与红心 */
+        .result-item { border-bottom: 1px solid #ebeef5; padding: 15px 0; display: flex; flex-direction: column; }
         .result-item:last-child { border-bottom: none; }
-        .rank { font-size: 24px; font-weight: bold; color: #E6A23C; margin-right: 15px; }
-        .song-info h3 { margin: 0 0 5px 0; color: #303133; }
+        .rank { font-size: 24px; font-weight: bold; color: #E6A23C; margin-right: 15px; width: 40px;}
+        .song-info h3 { margin: 0 0 5px 0; color: #303133; display: flex; align-items: center; justify-content: space-between;}
         .song-info p { margin: 0; color: #909399; font-size: 14px; }
-        .score { font-size: 14px; background: #ecf5ff; color: #409EFF; padding: 5px 10px; border-radius: 15px; }
+        .score { font-size: 14px; background: #ecf5ff; color: #409EFF; padding: 5px 10px; border-radius: 15px; height: fit-content; margin-left: 10px;}
+        .heart-btn { background: none; border: none; font-size: 22px; cursor: pointer; transition: transform 0.2s; padding: 0 10px;}
+        .heart-btn:hover { transform: scale(1.2); }
     </style>
 </head>
 <body>
     <div id="app">
-        <h1>🎵 AI 音乐相似度检索系统</h1>
+        <div class="header">
+            <h1>🎵 AI 音乐检索</h1>
+            <div class="user-actions">
+                <template v-if="currentUser">
+                    <span style="color: #606266; font-weight: bold; margin-right: 10px;">👋 {{ currentUser.username }}</span>
+                    <button class="btn-fav" @click="showFavModal = true">❤️ 我的收藏</button>
+                    <button @click="logout" style="border-color: #909399; color: #909399;">退出</button>
+                </template>
+                <template v-else>
+                    <button @click="openAuth('login')">登录</button>
+                    <button @click="openAuth('register')">注册</button>
+                </template>
+            </div>
+        </div>
+
+        <div class="modal-overlay" v-if="showAuthModal" @click.self="showAuthModal = false">
+            <div class="modal-content">
+                <h2 style="text-align: center; margin-top: 0; color: #303133;">{{ authMode === 'login' ? '🔑 账号登录' : '✨ 注册新账号' }}</h2>
+                <input type="text" v-model="authForm.username" placeholder="请输入用户名" @keyup.enter="submitAuth">
+                <input type="password" v-model="authForm.password" placeholder="请输入密码" @keyup.enter="submitAuth">
+                <button class="auth-btn" @click="submitAuth">{{ authMode === 'login' ? '登 录' : '注 册' }}</button>
+                <p class="toggle-text" @click="authMode = authMode === 'login' ? 'register' : 'login'">
+                    {{ authMode === 'login' ? '没有账号？点击去注册 🚀' : '已有账号？点击去登录 👈' }}
+                </p>
+            </div>
+        </div>
+
+        <div class="modal-overlay" v-if="showFavModal" @click.self="showFavModal = false">
+            <div class="modal-content wide">
+                <h2 style="margin-top: 0; border-bottom: 2px solid #F56C6C; padding-bottom: 10px;">❤️ 我的专属歌单</h2>
+                <div v-if="favList.length === 0" style="text-align: center; color: #909399; padding: 20px 0;">
+                    空空如也，快去检索并收藏你喜欢的歌曲吧！
+                </div>
+                <div class="result-item" v-for="(song, index) in favList" :key="index">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="song-info" style="flex-grow: 1;">
+                            <h3>{{ song.title }}</h3>
+                            <p>歌手: {{ song.artist }}</p>
+                        </div>
+                        <button class="heart-btn" @click="toggleFav(song)">❤️</button>
+                    </div>
+                    <audio v-if="song.audio_url" controls controlsList="nodownload" :src="'http://127.0.0.1:8000' + song.audio_url" style="width: 100%; height: 35px; margin-top: 10px; outline: none;"></audio>
+                </div>
+            </div>
+        </div>
 
         <div class="card">
             <h3>第一步：上传待检索音频</h3>
@@ -44,14 +109,23 @@
         <div class="card" v-if="results.length > 0">
             <h3>检索结果 (Top {{ results.length }})</h3>
             <div class="result-item" v-for="res in results" :key="res.rank">
-                <div style="display: flex; align-items: center;">
-                    <div class="rank">#{{ res.rank }}</div>
-                    <div class="song-info">
-                        <h3>{{ res.title }}</h3>
-                        <p>歌手: {{ res.artist }}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; flex-grow: 1;">
+                        <div class="rank">#{{ res.rank }}</div>
+                        <div class="song-info" style="flex-grow: 1;">
+                            <h3 style="margin-bottom: 2px;">
+                                {{ res.title }}
+                                <button class="heart-btn" @click="toggleFav(res)">
+                                    {{ favSet.has(res.file_path) ? '❤️' : '🤍' }}
+                                </button>
+                            </h3>
+                            <p>歌手: {{ res.artist }}</p>
+                        </div>
                     </div>
+                    <div class="score">哈希差异: {{ res.distance }} bit</div>
                 </div>
-                <div class="score">哈希差异: {{ res.distance }} bit</div>
+
+                <audio v-if="res.audio_url" controls controlsList="nodownload" :src="'http://127.0.0.1:8000' + res.audio_url" style="width: 100%; height: 35px; margin-top: 10px; outline: none;"></audio>
             </div>
         </div>
     </div>
@@ -66,70 +140,119 @@
                 const results = ref([]);
                 let wavesurfer = null;
 
-                // 初始化波形播放器
-                onMounted(() => {
-                    wavesurfer = WaveSurfer.create({
-                        container: '#waveform',
-                        waveColor: '#409EFF',
-                        progressColor: '#0052d9',
-                        height: 80,
-                        barWidth: 2,
-                        barRadius: 2,
-                        cursorWidth: 1,
-                    });
+                const currentUser = ref(null);
+                const showAuthModal = ref(false);
+                const authMode = ref('login');
+                const authForm = ref({ username: '', password: '' });
 
-                    // 点击波形可以播放/暂停
-                    wavesurfer.on('click', () => {
-                        wavesurfer.playPause();
+                // 🌟 收藏相关状态
+                const showFavModal = ref(false);
+                const favList = ref([]); // 收藏列表数据
+                const favSet = ref(new Set()); // 用于O(1)极速判断红心状态的集合
+
+                // 初始化时恢复用户状态并拉取收藏单
+                onMounted(() => {
+                    const savedUser = localStorage.getItem('music_app_user');
+                    if (savedUser) {
+                        currentUser.value = JSON.parse(savedUser);
+                        fetchFavorites(); // 登录状态下自动拉取收藏
+                    }
+
+                    wavesurfer = WaveSurfer.create({
+                        container: '#waveform', waveColor: '#409EFF', progressColor: '#0052d9',
+                        height: 80, barWidth: 2, barRadius: 2, cursorWidth: 1,
                     });
+                    wavesurfer.on('click', () => { wavesurfer.playPause(); });
                 });
 
-                // 处理文件上传并绘制波形
-                const handleFileUpload = (event) => {
-                    const file = event.target.files[0];
-                    if (file) {
-                        selectedFile.value = file;
-                        results.value = []; // 清空上次结果
-                        // 生成本地 URL 并让 wavesurfer 读取
-                        const objectUrl = URL.createObjectURL(file);
-                        wavesurfer.load(objectUrl);
-                    }
+                // --- 🌟 收藏核心逻辑 ---
+                // 获取最新收藏列表
+                const fetchFavorites = async () => {
+                    if (!currentUser.value) return;
+                    try {
+                        const res = await axios.get(`http://127.0.0.1:8000/favorites/${currentUser.value.user_id}`);
+                        if (res.data.code === 200) {
+                            favList.value = res.data.data;
+                            // 将所有收藏的文件路径存入 Set，方便页面极速渲染红心
+                            favSet.value = new Set(favList.value.map(item => item.file_path));
+                        }
+                    } catch (e) { console.error("获取收藏失败", e); }
                 };
 
-                // 发送请求给 FastAPI 后端
-                const searchMusic = async () => {
-                    if (!selectedFile.value) return;
-
-                    isSearching.value = true;
-                    // 使用 FormData 封装文件 [cite: 138]
-                    const formData = new FormData();
-                    formData.append('file', selectedFile.value);
-
+                // 点击红心触发切换
+                const toggleFav = async (song) => {
+                    if (!currentUser.value) {
+                        alert("要先登录才能把好歌藏进自己的口袋哦！");
+                        openAuth('login');
+                        return;
+                    }
                     try {
-                        // 请求你刚刚跑通的本地 8000 端口
-                        const response = await axios.post('http://127.0.0.1:8000/search', formData, {
-                            headers: { 'Content-Type': 'multipart/form-data' }
+                        const res = await axios.post('http://127.0.0.1:8000/favorite/toggle', {
+                            user_id: currentUser.value.user_id,
+                            file_path: song.file_path,
+                            title: song.title,
+                            artist: song.artist
                         });
 
-                        if (response.data.code === 200) {
-                            results.value = response.data.data;
-                        } else {
-                            alert("检索出错: " + response.data.message);
+                        if (res.data.code === 200) {
+                            // 重新拉取一次列表刷新红心状态
+                            fetchFavorites();
                         }
-                    } catch (error) {
-                        console.error("网络请求失败:", error);
-                        alert("无法连接到后端服务器，请确保 main.py 正在运行！");
-                    } finally {
-                        isSearching.value = false;
-                    }
+                    } catch (e) { console.error("操作收藏夹失败", e); }
+                };
+
+                // --- 鉴权相关 ---
+                const openAuth = (mode) => { authMode.value = mode; authForm.value = { username: '', password: '' }; showAuthModal.value = true; };
+
+                const logout = () => {
+                    currentUser.value = null;
+                    localStorage.removeItem('music_app_user');
+                    favList.value = [];
+                    favSet.value.clear(); // 清空红心状态
+                };
+
+                const submitAuth = async () => {
+                    if (!authForm.value.username || !authForm.value.password) return alert("填点东西吧！");
+                    const url = authMode.value === 'login' ? 'http://127.0.0.1:8000/login' : 'http://127.0.0.1:8000/register';
+                    try {
+                        const response = await axios.post(url, { username: authForm.value.username, password: authForm.value.password });
+                        if (response.data.code === 200) {
+                            if (authMode.value === 'login') {
+                                currentUser.value = response.data.data;
+                                localStorage.setItem('music_app_user', JSON.stringify(currentUser.value));
+                                showAuthModal.value = false;
+                                fetchFavorites(); // 登录成功立刻加载歌单
+                            } else {
+                                alert("注册成功！请登录！");
+                                authMode.value = 'login';
+                                authForm.value.password = '';
+                            }
+                        } else { alert(response.data.message); }
+                    } catch (e) { alert("网络连接失败！"); }
+                };
+
+                // --- 搜索相关 ---
+                const handleFileUpload = (event) => {
+                    const file = event.target.files[0];
+                    if (file) { selectedFile.value = file; results.value = []; wavesurfer.load(URL.createObjectURL(file)); }
+                };
+
+                const searchMusic = async () => {
+                    if (!selectedFile.value) return;
+                    isSearching.value = true;
+                    const formData = new FormData(); formData.append('file', selectedFile.value);
+                    try {
+                        const response = await axios.post('http://127.0.0.1:8000/search', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                        if (response.data.code === 200) results.value = response.data.data;
+                        else alert("检索出错: " + response.data.message);
+                    } catch (e) { alert("无法连接到后端服务器！"); }
+                    finally { isSearching.value = false; }
                 };
 
                 return {
-                    selectedFile,
-                    isSearching,
-                    results,
-                    handleFileUpload,
-                    searchMusic
+                    selectedFile, isSearching, results, handleFileUpload, searchMusic,
+                    currentUser, showAuthModal, authMode, authForm, openAuth, logout, submitAuth,
+                    showFavModal, favList, favSet, toggleFav
                 }
             }
         }).mount('#app');
