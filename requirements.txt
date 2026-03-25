@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+bcrypt
+librosa
+torch
+numpy
+faiss-cpu
+tinytag
+soundfile
