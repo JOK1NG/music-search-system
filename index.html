@@ -1,224 +1,822 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 音乐相似度检索系统 - 终极版</title>
+    <title>AI 音乐相似度检索系统 - Codex Dream UI</title>
+    <!-- Vue 3 & 依赖 (坚持零外部打包工具) -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
     <style>
         :root {
-            --apple-bg: #F5F5F7;
-            --apple-card: rgba(255, 255, 255, 0.65);
-            --apple-blue: #007AFF;
-            --apple-blue-hover: #0056b3;
-            --apple-red: #FF3B30;
-            --apple-text: #1D1D1F;
-            --apple-gray: #86868B;
-            --apple-border: rgba(0, 0, 0, 0.05);
-            --shadow-soft: 0 10px 30px rgba(0,0,0,0.04);
-            --shadow-hover: 0 15px 35px rgba(0,0,0,0.08);
+            /* 🌌 OpenAI Codex / Apple 浅色高极简色规 */
+            --text-hero: #0f172a;
+            /* 极度深沉黑 */
+            --text-secondary: #64748b;
+            /* 具有呼吸感的灰色 */
+            --bg-base: #f8fafc;
+            /* 莹白底色 */
+
+            /* 🔮 梦幻云彩主色调 */
+            --cloud-indigo: #c7d2fe;
+            --cloud-purple: #c4b5fd;
+            --cloud-blue: #bfdbfe;
+            --cloud-pink: #fbcfe8;
+
+            /* 🪞 极致通透玻璃体 */
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --shadow-float: 0 25px 50px -12px rgba(15, 23, 42, 0.08);
+
+            /* 🔘 控制控件 */
+            --btn-dark: #0f172a;
+            --btn-dark-hover: #1e293b;
+            --apple-red: #ef4444;
         }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: var(--apple-bg); 
-            background-image: radial-gradient(circle at 15% 50%, rgba(0, 122, 255, 0.04), transparent 30%), 
-                              radial-gradient(circle at 85% 30%, rgba(255, 59, 48, 0.04), transparent 30%);
-            background-attachment: fixed;
-            color: var(--apple-text); 
-            max-width: 800px; 
-            margin: 0 auto; 
-            padding: 40px 20px; 
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-hero);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             min-height: 100vh;
         }
 
-        .card { 
-            background: var(--apple-card); 
-            backdrop-filter: blur(40px); 
-            -webkit-backdrop-filter: blur(40px);
-            border: 1px solid var(--apple-border);
-            border-radius: 24px; 
-            padding: 30px; 
-            box-shadow: var(--shadow-soft); 
-            margin-bottom: 24px; 
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s;
+        /* ========================================= */
+        /* 🎨 核心：CSS Fluid Mesh Gradient (造梦引擎) */
+        /* ========================================= */
+        .mesh-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -2;
+            overflow: hidden;
+            background-color: #f1f5f9;
+            /* 基础纸白 */
         }
-        .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
-        .card h3 { margin-top: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.3px; color: var(--apple-text); }
 
-        /* 导航栏 */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding: 0 10px; }
-        .header h1 { margin: 0; color: var(--apple-text); font-size: 34px; font-weight: 700; letter-spacing: -1px; }
-        .user-actions { display: flex; align-items: center; gap: 12px; }
-        .user-info { font-weight: 600; color: var(--apple-text); font-size: 15px; }
+        /* 巨大的染色云雾球体，利用巨大的 blur 和 CSS 动画交融 */
+        .mesh-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px) saturate(150%);
+            opacity: 0.8;
+            animation: float 25s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
 
-        /* 按钮与表单 */
-        button { font-family: inherit; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); outline: none; }
-        .btn-primary { background: var(--apple-blue); color: white; border: none; border-radius: 999px; padding: 12px 24px; font-size: 15px; font-weight: 600; cursor: pointer; }
-        .btn-primary:hover { background: var(--apple-blue-hover); transform: scale(1.02); }
-        .btn-primary:active { transform: scale(0.98); }
-        .btn-primary:disabled { background: #A9D1FF; cursor: not-allowed; transform: none; }
-        
-        .btn-upload { background: rgba(0, 122, 255, 0.1); color: var(--apple-blue); border: none; border-radius: 12px; padding: 12px 20px; font-size: 15px; font-weight: 600; cursor: pointer; }
-        .btn-upload:hover { background: rgba(0, 122, 255, 0.15); }
-        .search-btn-full { width: 100%; margin-top: 15px; padding: 14px; font-size: 16px; }
+        .orb-1 {
+            background: var(--cloud-purple);
+            width: 800px;
+            height: 800px;
+            top: -200px;
+            left: -100px;
+            animation-duration: 28s;
+        }
 
-        .btn-fav-nav { background: rgba(255, 59, 48, 0.1); color: var(--apple-red); border: none; border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
-        .btn-fav-nav:hover { background: rgba(255, 59, 48, 0.15); transform: scale(1.03); }
-        
-        .btn-secondary { background: rgba(0,0,0,0.05); color: var(--apple-text); border: none; border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer; }
-        .btn-secondary:hover { background: rgba(0,0,0,0.08); }
+        .orb-2 {
+            background: var(--cloud-blue);
+            width: 900px;
+            height: 900px;
+            top: 20%;
+            right: -200px;
+            animation-delay: -5s;
+            animation-duration: 35s;
+        }
 
-        /* 弹窗通用样式 */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.3s ease; }
-        .modal-content { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); padding: 35px 30px; border-radius: 24px; width: 340px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.4); animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .modal-content.wide { width: 480px; max-height: 85vh; overflow-y: auto; padding: 30px; }
-        
-        .modal-title { text-align: center; margin: 0 0 25px 0; color: var(--apple-text); font-weight: 700; font-size: 24px; letter-spacing: -0.5px; }
-        .modal-subtitle { border-bottom: 1px solid var(--apple-border); padding-bottom: 20px; font-size: 22px; margin-bottom: 20px;}
-        
-        .auth-input { width: 100%; padding: 15px 16px; margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; box-sizing: border-box; outline: none; font-size: 15px; font-family: inherit; background: rgba(255,255,255,0.7); transition: all 0.2s; }
-        .auth-input:focus { border-color: var(--apple-blue); background: #fff; box-shadow: 0 0 0 4px rgba(0,122,255,0.1); }
-        
-        .toggle-text { text-align: center; color: var(--apple-blue); font-size: 14px; font-weight: 500; cursor: pointer; margin: 15px 0 0 0; }
-        .toggle-text:hover { text-decoration: underline; }
+        .orb-3 {
+            background: var(--cloud-pink);
+            width: 700px;
+            height: 700px;
+            bottom: -300px;
+            left: 15%;
+            animation-delay: -12s;
+            animation-duration: 32s;
+        }
 
-        /* 波形图 */
-        #waveform { margin-top: 20px; margin-bottom: 10px; background: rgba(255,255,255,0.5); border: 1px solid var(--apple-border); border-radius: 16px; overflow: hidden; padding: 10px;}
+        .orb-4 {
+            background: var(--cloud-indigo);
+            width: 600px;
+            height: 600px;
+            top: 40%;
+            left: 40%;
+            animation-delay: -18s;
+            animation-duration: 26s;
+        }
 
-        /* 列表项 */
-        .result-item { border-bottom: 1px solid var(--apple-border); padding: 20px 10px; display: flex; flex-direction: column; transition: background 0.3s; border-radius: 16px; margin-bottom: 5px;}
-        .result-item:hover { background: rgba(0,0,0,0.02); }
-        .result-item:last-child { border-bottom: none; margin-bottom: 0; }
-        
-        .rank { font-size: 28px; font-weight: 700; color: #D2D2D7; margin-right: 20px; width: 40px; display: flex; justify-content: center; }
-        .song-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: center;}
-        .song-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-        .song-title-row h3 { margin: 0; color: var(--apple-text); font-size: 18px; font-weight: 600; }
-        .song-info p { margin: 0; color: var(--apple-gray); font-size: 14px; font-weight: 500;}
-        
-        .score { font-size: 12px; font-weight: 600; background: rgba(0, 122, 255, 0.1); color: var(--apple-blue); padding: 4px 10px; border-radius: 999px; line-height: 1; }
-        
-        .heart-btn { background: none; border: none; font-size: 22px; cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding: 5px; margin-left: auto;}
-        .heart-btn:hover { transform: scale(1.15) rotate(-5deg); }
-        .heart-btn:active { transform: scale(0.9); }
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
 
-        /* 原生音频播放器优化 */
-        audio { width: 100%; height: 44px; margin-top: 15px; outline: none; border-radius: 22px; }
-        audio::-webkit-media-controls-enclosure { background-color: rgba(0,0,0,0.04); }
+            33% {
+                transform: translate(150px, 100px) scale(1.1) rotate(45deg);
+            }
 
-        /* 动画关键帧 */
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-        
-        /* 空状态记录 */
-        .empty-state { text-align: center; color: var(--apple-gray); padding: 30px 0; font-size: 15px; font-weight: 500; }
+            66% {
+                transform: translate(-100px, 200px) scale(0.9) rotate(-20deg);
+            }
+
+            100% {
+                transform: translate(50px, -150px) scale(1.05) rotate(15deg);
+            }
+        }
+
+        /* ========================================= */
+        /* 🔦 光标柔性探照灯 (Spotlight Tracker) */
+        /* ========================================= */
+        #spotlight {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 800px;
+            /* 光环极其巨大的尺寸 */
+            height: 800px;
+            transform: translate(-50%, -50%);
+            /* 确保圆心在光标下 */
+            border-radius: 50%;
+            /* 极尽柔和的发光中心，边缘完全消散，不使用叠加混合，而是纯粹的提亮 */
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 65%);
+            z-index: -1;
+            pointer-events: none;
+            /* 事件穿透到真正的页面按钮上 */
+            transition: opacity 0.3s;
+            opacity: 0;
+            /* 默认隐藏，等鼠标入场 */
+            will-change: transform;
+        }
+
+        /* ========================================= */
+        /* 📐 Apple & Codex 页面极净骨架结构 */
+        /* ========================================= */
+        .app-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 1024px;
+            margin: 0 auto;
+            padding: 30px 20px 100px 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 极致精简顶通栏 */
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 70px;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: var(--text-hero);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* OpenAI 风巨大的居中首屏 (Hero) 区域 */
+        .hero-section {
+            text-align: center;
+            max-width: 800px;
+            margin-bottom: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hero-icon {
+            width: 88px;
+            height: 88px;
+            background: #0f172a;
+            /* 极深的蓝黑色 */
+            border-radius: 28px;
+            /* 极致圆滑的超大圆角 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+            /* 更有层次的弥散投射阴影 */
+            box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            transform: rotate(-4deg);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .hero-icon:hover {
+            transform: rotate(0deg) scale(1.05);
+        }
+
+        .hero-title {
+            font-size: 72px;
+            font-weight: 800;
+            letter-spacing: -3px;
+            margin: 0 0 15px 0;
+            color: var(--text-hero);
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin: 0 0 35px 0;
+            line-height: 1.6;
+            letter-spacing: -0.2px;
+            max-width: 600px;
+        }
+
+        /* 🔘 交互控件群 */
+        .action-dock {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        button {
+            font-family: inherit;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            outline: none;
+        }
+
+        /* 极度厚重的黑色长胶囊 (Codex 同款) */
+        .btn-primary {
+            background: var(--btn-dark);
+            color: white;
+            border: none;
+            border-radius: 999px;
+            padding: 18px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+        }
+
+        .btn-primary:hover {
+            background: var(--btn-dark-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(15, 23, 42, 0.25);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+        }
+
+        .btn-primary:disabled {
+            background: rgba(15, 23, 42, 0.3);
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 纯净浅灰色的底边描边按钮 */
+        .btn-upload {
+            background: rgba(255, 255, 255, 0.7);
+            color: var(--text-hero);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 999px;
+            padding: 17px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-upload:hover {
+            background: #fff;
+            border-color: rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* 导航辅栏轻型浅色按钮 */
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 999px;
+            padding: 8px 16px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .btn-secondary:hover {
+            color: var(--text-hero);
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        .btn-fav-nav {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--apple-red);
+            border: none;
+            border-radius: 999px;
+            padding: 8px 16px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-fav-nav:hover {
+            background: rgba(239, 68, 68, 0.15);
+            transform: scale(1.05);
+        }
+
+        /* ========================================= */
+        /* 💳 完全虚化的高透终端卡片 (Results Window) */
+        /* ========================================= */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(60px) saturate(160%);
+            -webkit-backdrop-filter: blur(60px) saturate(160%);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 0;
+            box-shadow: var(--shadow-float);
+            margin-top: 10px;
+            width: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            /* 入场动画，更显灵动 */
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 模拟 Mac 窗口原点 */
+        .mac-header {
+            background: rgba(255, 255, 255, 0.4);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mac-header .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .mac-header .dot.red {
+            background: #ff5f56;
+        }
+
+        .mac-header .dot.yellow {
+            background: #ffbd2e;
+        }
+
+        .mac-header .dot.green {
+            background: #27c93f;
+        }
+
+        .mac-header .window-title {
+            margin-left: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .card-body {
+            padding: 35px;
+        }
+
+        /* 波形显示器装配区 */
+        #waveform-container {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 30px;
+        }
+
+        #waveform {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 12px;
+            overflow: hidden;
+            padding: 10px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.02);
+        }
+
+        /* 高维检索结果条目 (去除冗杂边框) */
+        .result-item {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            padding: 24px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .rank {
+            font-size: 20px;
+            font-weight: 800;
+            color: #94a3b8;
+            width: 40px;
+            font-family: monospace;
+        }
+
+        .song-info {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .song-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .song-title-row h3 {
+            margin: 0;
+            color: var(--text-hero);
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .song-info p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .score {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            background: #e2e8f0;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+
+        .heart-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 5px;
+            margin-left: auto;
+            filter: grayscale(100%);
+            opacity: 0.3;
+        }
+
+        .heart-btn:hover {
+            transform: scale(1.25) rotate(-5deg);
+            filter: grayscale(0%);
+            opacity: 1;
+        }
+
+        .heart-btn:active {
+            transform: scale(0.9);
+        }
+
+        .heart-btn.active {
+            filter: grayscale(0%);
+            opacity: 1;
+        }
+
+        /* MacOS 居于卡片内的 Native播放器覆写 */
+        audio {
+            width: 100%;
+            height: 44px;
+            margin-top: 20px;
+            outline: none;
+            border-radius: 12px;
+        }
+
+        /* ========================================= */
+        /* 🪟 模态框矩阵体系 (纯白高反差质感) */
+        /* ========================================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(60px) saturate(180%);
+            -webkit-backdrop-filter: blur(60px);
+            padding: 40px;
+            border-radius: 28px;
+            width: 360px;
+            box-shadow: var(--shadow-float);
+            border: 1px solid var(--glass-border);
+            animation: zoomIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-content.wide {
+            width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 35px;
+        }
+
+        .modal-title {
+            text-align: center;
+            margin: 0 0 25px 0;
+            color: var(--text-hero);
+            font-weight: 800;
+            font-size: 26px;
+            letter-spacing: -0.8px;
+        }
+
+        .modal-subtitle {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            padding-bottom: 20px;
+            font-size: 22px;
+            margin-bottom: 25px;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 18px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 14px;
+            box-sizing: border-box;
+            outline: none;
+            font-size: 16px;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .auth-input:focus {
+            border-color: var(--text-hero);
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
+        }
+
+        .toggle-text {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 25px 0 0 0;
+        }
+
+        .toggle-text:hover {
+            color: var(--text-hero);
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 50px 0;
+            font-size: 16px;
+            font-weight: 500;
+            border: 2px dashed rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            margin-top: 10px;
+        }
+
+        /* 系统关键帧与交互过渡 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.94) translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
+
 <body>
-    <div id="app">
+
+    <!-- 🌌 CSS 流云背景核心：摒弃卡顿的 Canvas 画布 -->
+    <div class="mesh-background">
+        <div class="mesh-orb orb-1"></div>
+        <div class="mesh-orb orb-2"></div>
+        <div class="mesh-orb orb-3"></div>
+        <div class="mesh-orb orb-4"></div>
+    </div>
+
+    <!-- 🔦 光标探照灯：纯粹的 CSS / JS 叠加提亮层 -->
+    <div id="spotlight"></div>
+
+    <!-- ========================================== -->
+    <!-- 📌 Vue 主体 APP (纯净逻辑无需更改)          -->
+    <div id="app" class="app-container">
+
+        <!-- 极致排版：清净首行 -->
         <div class="header">
-            <h1>🎵 Audio Search</h1>
+            <h1>VectorTune</h1>
             <div class="user-actions">
                 <template v-if="currentUser">
-                    <span class="user-info">Hey, {{ currentUser.username }}</span>
-                    <button class="btn-fav-nav" @click="showFavModal = true">❤️ Favorites</button>
-                    <button class="btn-secondary" @click="logout">退出</button>
+                    <span class="user-info">{{ currentUser.username }}</span>
+                    <button class="btn-fav-nav" @click="showFavModal = true">❤️ 收藏夹</button>
+                    <button class="btn-secondary" @click="logout">登出</button>
                 </template>
                 <template v-else>
-                    <button class="btn-secondary" @click="openAuth('login')">登录</button>
-                    <button class="btn-primary" @click="openAuth('register')" style="padding: 8px 16px;">注册</button>
+                    <button class="btn-secondary" @click="openAuth('login')" style="color:var(--text-hero);">登录</button>
+                    <button class="btn-primary" @click="openAuth('register')"
+                        style="padding: 10px 24px; font-size:14px;">注册</button>
                 </template>
             </div>
         </div>
 
+        <!-- OpenAI 巨型标题主视觉 (Hero) -->
+        <div class="hero-section">
+            <div class="hero-icon">
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <!-- '>' 右箭头 -->
+                    <polyline points="7 6 13 12 7 18"></polyline>
+                    <!-- '_' 底部光标 -->
+                    <line x1="12" y1="20" x2="20" y2="20"></line>
+                </svg>
+            </div>
+            <h1 class="hero-title">Audio Fingerprint</h1>
+            <p class="hero-subtitle">利用深度哈希网络，在噪声中提取音频特征。<br />实现毫秒级寻址</p>
+
+            <div class="action-dock">
+                <input type="file" @change="handleFileUpload" accept="audio/*" style="display: none;" ref="fileInput">
+                <button class="btn-upload" @click="$refs.fileInput.click()">
+                    <span>选择音频片段</span>
+                </button>
+
+                <button class="btn-primary" :disabled="!selectedFile || isSearching" @click="searchMusic">
+                    检索匹配引擎 ↗
+                </button>
+            </div>
+
+            <div v-show="selectedFile"
+                style="margin-top: 25px; font-size: 14px; font-weight: 600; color: #3b82f6; background: rgba(59, 130, 246, 0.1); padding: 8px 20px; border-radius: 999px;">
+                Ready to index: {{ selectedFile?.name }}
+            </div>
+
+            <div id="waveform-container" v-show="selectedFile">
+                <div id="waveform"></div>
+            </div>
+        </div>
+
+        <!-- 身份核验悬浮窗口 (高定毛玻璃 Apple 式样) -->
         <div class="modal-overlay" v-if="showAuthModal" @click.self="showAuthModal = false">
             <div class="modal-content">
-                <h2 class="modal-title">{{ authMode === 'login' ? '账号登录' : '创建新账号' }}</h2>
-                <input class="auth-input" type="text" v-model="authForm.username" placeholder="用户名" @keyup.enter="submitAuth">
-                <input class="auth-input" type="password" v-model="authForm.password" placeholder="密码" @keyup.enter="submitAuth">
-                <button class="btn-primary auth-btn" @click="submitAuth">{{ authMode === 'login' ? '登 录' : '注 册' }}</button>
+                <h2 class="modal-title">{{ authMode === 'login' ? '欢迎回来' : '创建账户' }}</h2>
+                <input class="auth-input" type="text" v-model="authForm.username" placeholder="账户名称"
+                    @keyup.enter="submitAuth">
+                <input class="auth-input" type="password" v-model="authForm.password" placeholder="密码"
+                    @keyup.enter="submitAuth">
+                <button class="btn-primary"
+                    style="width: 100%; border-radius: 14px; padding: 18px; margin-top: 15px; justify-content: center;"
+                    @click="submitAuth">
+                    {{ authMode === 'login' ? '登录' : '注册' }} ↗
+                </button>
                 <p class="toggle-text" @click="authMode = authMode === 'login' ? 'register' : 'login'">
-                    {{ authMode === 'login' ? '没有账号？创建账号' : '已有账号？立即登录' }}
+                    {{ authMode === 'login' ? '没有账户？点击创建' : '已有账户？直接登录' }}
                 </p>
             </div>
         </div>
 
+        <!-- 个人音乐云盘悬浮层 -->
         <div class="modal-overlay" v-if="showFavModal" @click.self="showFavModal = false">
             <div class="modal-content wide">
-                <h2 class="modal-title modal-subtitle">❤️ My Library</h2>
+                <h2 class="modal-title modal-subtitle">收藏夹</h2>
                 <div v-if="favList.length === 0" class="empty-state">
-                    暂无收藏内容，去探索美妙音乐吧
+                    空空如也
                 </div>
-                <div class="result-item" v-for="(song, index) in favList" :key="index" style="padding: 15px 10px;">
+                <div class="result-item" v-for="(song, index) in favList" :key="index" style="padding: 15px 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div class="song-info">
                             <div class="song-title-row">
-                                <h3 style="font-size: 16px; margin: 0;">{{ song.title }}</h3>
+                                <h3 style="font-size: 16px;">{{ song.title }}</h3>
                             </div>
                             <p>{{ song.artist }}</p>
                         </div>
-                        <button class="heart-btn" @click="toggleFav(song)">❤️</button>
+                        <button class="heart-btn active" @click="toggleFav(song)">❤️</button>
                     </div>
-                    <audio v-if="song.audio_url" controls controlsList="nodownload" :src="'http://127.0.0.1:8000' + song.audio_url"></audio>
+                    <audio v-if="song.audio_url" controls controlsList="nodownload"
+                        :src="'http://127.0.0.1:8000' + song.audio_url" style="height:36px;"></audio>
                 </div>
             </div>
         </div>
 
-        <div class="card">
-            <h3>Audio Match</h3>
-            <div style="display: flex; align-items: center; gap: 15px; margin-top: 15px;">
-                <input type="file" @change="handleFileUpload" accept="audio/*" style="display: none;" ref="fileInput">
-                <button class="btn-upload" @click="$refs.fileInput.click()">选择音频文件</button>
-                <span v-if="selectedFile" style="color: var(--apple-text); font-weight: 500; font-size: 14px;">{{ selectedFile.name }}</span>
+        <!-- 全局极简动态提示宽 -->
+        <div class="modal-overlay" v-if="showAlertModal" style="z-index: 3000;">
+            <div class="modal-content" style="width: 320px; padding: 35px; border-radius: 24px; text-align: center;">
+                <h3 style="margin: 0 0 15px 0; color: var(--text-hero); font-size: 20px; font-weight: 800;">{{
+                    alertTitle }}</h3>
+                <p
+                    style="color: var(--text-secondary); font-size: 15px; margin: 0 0 30px 0; line-height: 1.6; word-break: break-all;">
+                    {{ alertMessage }}</p>
+                <button class="btn-primary"
+                    style="width: 100%; justify-content: center; padding: 14px; border-radius:14px;"
+                    @click="showAlertModal = false">确认收到</button>
             </div>
-
-            <div id="waveform" v-show="selectedFile"></div>
-
-            <button class="btn-primary search-btn-full" :disabled="!selectedFile || isSearching" @click="searchMusic">
-                {{ isSearching ? '正在分析声学指纹...' : '开始识别' }}
-            </button>
         </div>
 
+        <!-- 终端化结果排布：纯粹的白玻璃与内描边 -->
         <div class="card" v-if="results.length > 0">
-            <h3>匹配结果</h3>
-            <div class="result-item" v-for="res in results" :key="res.rank">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; flex-grow: 1;">
-                        <div class="rank">{{ res.rank }}</div>
-                        <div class="song-info">
-                            <div class="song-title-row">
-                                <h3>{{ res.title }}</h3>
-                                <button class="heart-btn" @click="toggleFav(res)">
-                                    {{ favSet.has(res.file_path) ? '❤️' : '🤍' }}
-                                </button>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <p>{{ res.artist }}</p>
-                                <span class="score">汉明距离 {{ res.distance }}</span>
+            <div class="mac-header">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+                <span class="window-title">Cortex.Engine ~ /results /hamming_distance</span>
+            </div>
+
+            <div class="card-body">
+                <div class="result-item" v-for="res in results" :key="res.rank">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; flex-grow: 1;">
+                            <div class="rank">{{ res.rank }}</div>
+                            <div class="song-info">
+                                <div class="song-title-row">
+                                    <h3>{{ res.title }}</h3>
+                                    <button class="heart-btn" :class="{ 'active': favSet.has(res.file_path) }"
+                                        @click="toggleFav(res)">
+                                        ❤️
+                                    </button>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <p>{{ res.artist }}</p>
+                                    <span class="score">Hamming [ {{ res.distance }} bit ]</span>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <audio v-if="res.audio_url" controls controlsList="nodownload"
+                        :src="'http://127.0.0.1:8000' + res.audio_url"></audio>
                 </div>
-
-                <audio v-if="res.audio_url" controls controlsList="nodownload" :src="'http://127.0.0.1:8000' + res.audio_url"></audio>
-            </div>
-        </div>
-
-        <!-- 🌟 自定义 Apple 风格提示弹窗 -->
-        <div class="modal-overlay" v-if="showAlertModal" style="z-index: 2000;">
-            <div class="modal-content" style="width: 280px; padding: 25px; text-align: center;">
-                <h3 style="margin: 0 0 10px 0; color: var(--apple-text); font-size: 18px; font-weight: 600; letter-spacing: -0.5px;">{{ alertTitle }}</h3>
-                <p style="color: var(--apple-gray); font-size: 15px; margin: 0 0 24px 0; line-height: 1.4; word-break: break-all;">{{ alertMessage }}</p>
-                <button class="btn-primary" style="width: 100%; padding: 12px; font-size: 16px;" @click="showAlertModal = false">好</button>
             </div>
         </div>
 
     </div>
 
+    <!-- 🧠 前端大脑：Vue 组件体系 -->
     <script>
         const { createApp, ref, onMounted } = Vue;
 
@@ -234,60 +832,56 @@
                 const authMode = ref('login');
                 const authForm = ref({ username: '', password: '' });
 
-                // 🌟 弹窗与收藏相关状态
                 const showAlertModal = ref(false);
                 const alertTitle = ref('');
                 const alertMessage = ref('');
-                
-                const customAlert = (msg, title = "提示") => {
+
+                const customAlert = (msg, title = "系统层通知") => {
                     alertTitle.value = title;
                     alertMessage.value = msg;
                     showAlertModal.value = true;
                 };
 
                 const showFavModal = ref(false);
-                const favList = ref([]); // 收藏列表数据
-                const favSet = ref(new Set()); // 用于O(1)极速判断红心状态的集合
+                const favList = ref([]);
+                const favSet = ref(new Set());
 
-                // 初始化时恢复用户状态并拉取收藏单
                 onMounted(() => {
                     const savedUser = localStorage.getItem('music_app_user');
                     if (savedUser) {
                         currentUser.value = JSON.parse(savedUser);
-                        fetchFavorites(); // 登录状态下自动拉取收藏
+                        fetchFavorites();
                     }
 
                     wavesurfer = WaveSurfer.create({
-                        container: '#waveform', 
-                        waveColor: '#007AFF', 
-                        progressColor: '#0056b3',
-                        height: 70, 
-                        barWidth: 3, 
-                        barRadius: 3, 
-                        cursorWidth: 0,
+                        container: '#waveform',
+                        waveColor: '#cbd5e1',
+                        progressColor: '#6366f1',
+                        height: 50,
+                        barWidth: 2,
+                        barGap: 3,
+                        barRadius: 2,
+                        cursorWidth: 2,
+                        cursorColor: '#0f172a',
                         normalize: true
                     });
                     wavesurfer.on('click', () => { wavesurfer.playPause(); });
                 });
 
-                // --- 🌟 收藏核心逻辑 ---
-                // 获取最新收藏列表
                 const fetchFavorites = async () => {
                     if (!currentUser.value) return;
                     try {
                         const res = await axios.get(`http://127.0.0.1:8000/favorites/${currentUser.value.user_id}`);
                         if (res.data.code === 200) {
                             favList.value = res.data.data;
-                            // 将所有收藏的文件路径存入 Set，方便页面极速渲染红心
                             favSet.value = new Set(favList.value.map(item => item.file_path));
                         }
-                    } catch (e) { console.error("获取收藏失败", e); }
+                    } catch (e) { }
                 };
 
-                // 点击红心触发切换
                 const toggleFav = async (song) => {
                     if (!currentUser.value) {
-                        customAlert("为了记录您的专属歌单，请您先登录个人账户。", "需要登录");
+                        customAlert("记录操作失败，宿主当前未被允许接入持久层存储节点，请先验证登入身份。", "云端权限");
                         openAuth('login');
                         return;
                     }
@@ -299,25 +893,21 @@
                             artist: song.artist
                         });
 
-                        if (res.data.code === 200) {
-                            // 重新拉取一次列表刷新红心状态
-                            fetchFavorites();
-                        }
-                    } catch (e) { console.error("操作收藏夹失败", e); }
+                        if (res.data.code === 200) fetchFavorites();
+                    } catch (e) { }
                 };
 
-                // --- 鉴权相关 ---
                 const openAuth = (mode) => { authMode.value = mode; authForm.value = { username: '', password: '' }; showAuthModal.value = true; };
 
                 const logout = () => {
                     currentUser.value = null;
                     localStorage.removeItem('music_app_user');
                     favList.value = [];
-                    favSet.value.clear(); // 清空红心状态
+                    favSet.value.clear();
                 };
 
                 const submitAuth = async () => {
-                    if (!authForm.value.username || !authForm.value.password) return customAlert("请完整填写用户名与密码。", "信息不完整");
+                    if (!authForm.value.username || !authForm.value.password) return customAlert("检测到密钥为空，鉴权通道阻断。", "缺失");
                     const url = authMode.value === 'login' ? 'http://127.0.0.1:8000/login' : 'http://127.0.0.1:8000/register';
                     try {
                         const response = await axios.post(url, { username: authForm.value.username, password: authForm.value.password });
@@ -326,17 +916,16 @@
                                 currentUser.value = response.data.data;
                                 localStorage.setItem('music_app_user', JSON.stringify(currentUser.value));
                                 showAuthModal.value = false;
-                                fetchFavorites(); // 登录成功立刻加载歌单
+                                fetchFavorites();
                             } else {
-                                customAlert("账户创建成功，您现在可以立即登录体验。", "欢迎加入");
+                                customAlert("证书发放结束，档案载入全局。", "完成");
                                 authMode.value = 'login';
                                 authForm.value.password = '';
                             }
-                        } else { customAlert(response.data.message, "出现错误"); }
-                    } catch (e) { customAlert("未能连接至服务器网络，请稍后重试。", "网络连接失败"); }
+                        } else { customAlert(response.data.message, "验证失配"); }
+                    } catch (e) { customAlert("找不到代理入口。", "断开"); }
                 };
 
-                // --- 搜索相关 ---
                 const handleFileUpload = (event) => {
                     const file = event.target.files[0];
                     if (file) { selectedFile.value = file; results.value = []; wavesurfer.load(URL.createObjectURL(file)); }
@@ -349,8 +938,8 @@
                     try {
                         const response = await axios.post('http://127.0.0.1:8000/search', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                         if (response.data.code === 200) results.value = response.data.data;
-                        else customAlert("检索过程发生异常: " + response.data.message, "查询失败");
-                    } catch (e) { customAlert("未能连接至服务器主机网络。", "网络错误"); }
+                        else customAlert("引擎核心坍缩: " + response.data.message, "降维阻断");
+                    } catch (e) { customAlert("宿主机守护进程无响应，Faiss 库未唤醒。", "失联"); }
                     finally { isSearching.value = false; }
                 };
 
@@ -362,5 +951,44 @@
             }
         }).mount('#app');
     </script>
+
+    <!-- 🔦 光标柔性探照灯极简引擎 -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const spotlight = document.getElementById('spotlight');
+            let mouseX = window.innerWidth / 2;
+            let mouseY = window.innerHeight / 2;
+            let spotX = mouseX;
+            let spotY = mouseY;
+            let isMouseIn = false;
+
+            window.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                if (!isMouseIn) {
+                    isMouseIn = true;
+                    spotlight.style.opacity = '1';
+                }
+            });
+
+            document.body.addEventListener('mouseleave', () => {
+                isMouseIn = false;
+                spotlight.style.opacity = '0';
+            });
+
+            // 使用 rAF 插入丝滑数学缓动 (Lerp)
+            function animateSpotlight() {
+                spotX += (mouseX - spotX) * 0.15;
+                spotY += (mouseY - spotY) * 0.15;
+
+                // 将跟随探照灯用 CSS Transform 定位，极其节省内存！
+                spotlight.style.transform = `translate(${spotX - 400}px, ${spotY - 400}px)`;
+
+                requestAnimationFrame(animateSpotlight);
+            }
+            animateSpotlight();
+        });
+    </script>
 </body>
+
 </html>
