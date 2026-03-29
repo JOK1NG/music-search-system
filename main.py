@@ -1,4 +1,6 @@
 import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # 修复 macOS ARM64 上 PyTorch + Faiss 的 OpenMP 冲突崩溃
+
 import shutil
 import uvicorn
 import sqlite3

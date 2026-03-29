@@ -8,3 +8,4 @@ numpy
 faiss-cpu
 tinytag
 soundfile
+python-multipart
