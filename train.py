@@ -2,102 +2,63 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from dataset import AudioTripletDataset
 from model import AudioHashNet
-from dataset import MusicTripletDataset
-import os
 
 
-# ==========================================
-# 1. 定义复合哈希损失函数 (Hash Loss) [cite: 198-206]
-# ==========================================
-class HashLoss(nn.Module):
-    def __init__(self, alpha=0.1, beta=0.1, margin=2.0):
-        super(HashLoss, self).__init__()
-        self.alpha = alpha
-        self.beta = beta
-        # 相似度严师：Triplet Loss，让 Anchor 靠近 Positive，远离 Negative [cite: 208-209]
-        self.triplet_loss = nn.TripletMarginLoss(margin=margin, p=2)
-
-    def forward(self, h_anchor, h_pos, h_neg):
-        # 1. Pairwise 相似度损失
-        l_pair = self.triplet_loss(h_anchor, h_pos, h_neg)
-
-        # 2. Quantization 量化损失：逼迫浮点数输出靠近 1 或 -1 [cite: 203-204]
-        # 公式推导：(|h| - 1)^2
-        l_quant = torch.mean((torch.abs(h_anchor) - 1.0) ** 2) + \
-                  torch.mean((torch.abs(h_pos) - 1.0) ** 2) + \
-                  torch.mean((torch.abs(h_neg) - 1.0) ** 2)
-
-        # 3. Balance 平衡损失：逼迫模型输出的 1 和 -1 数量大概相等（均值趋近于0） [cite: 205-206]
-        l_bal = torch.mean(h_anchor.mean(dim=1) ** 2) + \
-                torch.mean(h_pos.mean(dim=1) ** 2) + \
-                torch.mean(h_neg.mean(dim=1) ** 2)
-
-        return l_pair + self.alpha * l_quant + self.beta * l_bal
-
-
-# ==========================================
-# 2. 核心训练循环
-# ==========================================
 def train():
-    # 基础配置
-    RAW_PATH = "./data/raw"
-    BATCH_SIZE = 16  # 每次看16组歌
-    EPOCHS = 5  # 训练轮数
-    LEARNING_RATE = 1e-5  # 初始学习率 [cite: 210](修改前为1e-4)
-
-    # 初始化设备 (如果有 NVIDIA 显卡会自动用 GPU，否则用 CPU)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"🔥 训练设备已就绪: {device}")
+    print(f"🚀 使用设备: {device}")
 
-    # 加载数据集和模型
-    print("📦 正在准备三元组数据集 (可能会稍等几秒读取文件列表)...")
-    dataset = MusicTripletDataset(RAW_PATH)
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=0)
+    # 1. 加载数据集
+    dataset = AudioTripletDataset("./data/raw")
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=0)
 
+    # 2. 初始化 8 缸发动机网络
     model = AudioHashNet().to(device)
-    criterion = HashLoss(alpha=0.1, beta=0.1).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
 
+    # 🌟 核心修正 1：健康的及格线 margin=5.0
+    criterion = nn.TripletMarginLoss(margin=5.0, p=2)
 
-    print("🚀 正式开始训练！")
+    # 🌟 核心修正 2：极其关键的“微步学习率” lr=1e-5 ！！！感谢你的火眼金睛！
+    learning_rate = 1e-5
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    # 开始跑 Epoch
-    for epoch in range(EPOCHS):
+    # 🌟 核心修正 3：只需 3 轮康复训练
+    num_epochs = 3
+
+    print(f"🔥 开始康复训练！学习率: {learning_rate}, 及格线: 5.0")
+
+    # 3. 开始炼丹
+    for epoch in range(num_epochs):
         model.train()
-        running_loss = 0.0
+        total_loss = 0
+        for batch_idx, (anchor, positive, negative) in enumerate(dataloader):
+            anchor, positive, negative = anchor.to(device), positive.to(device), negative.to(device)
 
-        for batch_idx, (spec_a, spec_p, spec_n) in enumerate(dataloader):
-            # 将数据推入设备
-            spec_a, spec_p, spec_n = spec_a.to(device), spec_p.to(device), spec_n.to(device)
-
-            # 清空梯度
             optimizer.zero_grad()
 
-            # 前向传播：大脑分别听三段音频
-            h_a = model(spec_a)
-            h_p = model(spec_p)
-            h_n = model(spec_n)
+            # 提取三者的哈希特征
+            hash_a = model(anchor)
+            hash_p = model(positive)
+            hash_n = model(negative)
 
-            # 计算复合损失
-            loss = criterion(h_a, h_p, h_n)
-
-            # 反向传播与优化
+            # 计算三元组损失
+            loss = criterion(hash_a, hash_p, hash_n)
             loss.backward()
             optimizer.step()
 
-            running_loss += loss.item()
+            total_loss += loss.item()
 
-            # 每处理 5 个 Batch 打印一次日志
-            if (batch_idx + 1) % 5 == 0:
+            if (batch_idx + 1) % 10 == 0:
                 print(
-                    f"Epoch [{epoch + 1}/{EPOCHS}], Batch [{batch_idx + 1}/{len(dataloader)}], Loss: {loss.item():.4f}")
+                    f"Epoch [{epoch + 1}/{num_epochs}], Batch [{batch_idx + 1}/{len(dataloader)}], Loss: {loss.item():.4f}")
 
-        # 保存每个 Epoch 的模型权重
-        save_dir = "./checkpoints"
-        if not os.path.exists(save_dir): os.makedirs(save_dir)
-        torch.save(model.state_dict(), f"{save_dir}/hash_model_epoch_{epoch + 1}.pth")
-        print(f"💾 Epoch {epoch + 1} 完成！模型已保存，平均 Loss: {running_loss / len(dataloader):.4f}")
+        avg_loss = total_loss / len(dataloader)
+        print(f"💾 Epoch {epoch + 1} 完成！平均 Loss: {avg_loss:.4f}")
+
+        # 保存这轮的权重
+        torch.save(model.state_dict(), f"./checkpoints/hash_model_epoch_{epoch + 1}.pth")
 
 
 if __name__ == "__main__":

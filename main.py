@@ -1,13 +1,56 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 import os
 import shutil
+import uvicorn
+import sqlite3
+from pydantic import BaseModel
+import bcrypt
+from fastapi import FastAPI, UploadFile, File
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 # 导入你刚刚写好的终极版搜索器
 from search import load_system, search_music
 
 app = FastAPI(title="音乐音频相似度检索系统 API")
+
+# 🌟 新增：把本地的 ./data/raw 文件夹，挂载到网址的 /audio 路径下
+app.mount("/audio", StaticFiles(directory="./data/raw"), name="audio")
+
+# ==========================================
+# 🌟 用户系统配置区
+# ==========================================
+
+# 接收前端传来的账号密码的格式模型
+class UserReq(BaseModel):
+    username: str
+    password: str
+# 数据库扩容：创建用户表和收藏表
+def init_user_db():
+    conn = sqlite3.connect("music_hash.db")
+    cursor = conn.cursor()
+    # 1. 创建用户表 (username 必须唯一)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        )
+    ''')
+    # 2. 创建收藏表 (记录哪个用户收藏了哪首歌)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS favorites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            file_path TEXT NOT NULL,
+            title TEXT,
+            artist TEXT,
+            UNIQUE(user_id, file_path) 
+        )
+    ''')
+    conn.commit()
+    conn.close()
+# 每次启动服务器时自动建表
+init_user_db()
 
 # 配置 CORS 跨域（非常关键！否则后续 Vue 前端会被浏览器拦截报错）
 app.add_middleware(
@@ -25,6 +68,129 @@ INDEX, MODEL = load_system()
 print("✅ Web 服务器后台准备就绪！")
 
 
+# ==========================================
+# 🌟 注册接口 (纯净 bcrypt 版)
+# ==========================================
+@app.post("/register")
+async def register(user: UserReq):
+    conn = sqlite3.connect("music_hash.db")
+    cursor = conn.cursor()
+    try:
+        # 🌟 修改点：使用原生 bcrypt 把密码碾碎加盐，并转成字符串存入数据库
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), salt).decode('utf-8')
+
+        cursor.execute(
+            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+            (user.username, hashed_password)
+        )
+        conn.commit()
+        return {"code": 200, "message": "注册成功！欢迎加入！"}
+    except sqlite3.IntegrityError:
+        return {"code": 400, "message": "哎呀，用户名已经被抢注啦，换一个吧！"}
+    finally:
+        conn.close()
+
+
+# ==========================================
+# 🌟 登录接口 (纯净 bcrypt 版)
+# ==========================================
+@app.post("/login")
+async def login(user: UserReq):
+    conn = sqlite3.connect("music_hash.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, password_hash FROM users WHERE username=?", (user.username,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        return {"code": 400, "message": "用户名不存在哦！"}
+
+    user_id, hashed_password = row
+
+    # 🌟 修改点：使用原生 bcrypt 核对用户输入的密码和数据库里的乱码是否匹配
+    if not bcrypt.checkpw(user.password.encode('utf-8'), hashed_password.encode('utf-8')):
+        return {"code": 400, "message": "密码错误，再想想？"}
+
+    return {
+        "code": 200,
+        "message": "登录成功！",
+        "data": {
+            "user_id": user_id,
+            "username": user.username
+        }
+    }
+
+
+# ==========================================
+# 🌟 收藏系统专用数据模型
+# ==========================================
+class FavoriteReq(BaseModel):
+    user_id: int
+    file_path: str
+    title: str
+    artist: str
+
+
+# ==========================================
+# 🌟 收藏 / 取消收藏 (智能切换接口)
+# ==========================================
+@app.post("/favorite/toggle")
+async def toggle_favorite(req: FavoriteReq):
+    conn = sqlite3.connect("music_hash.db")
+    cursor = conn.cursor()
+
+    # 先查一下这首歌这个用户是不是已经收藏过了
+    cursor.execute("SELECT id FROM favorites WHERE user_id=? AND file_path=?", (req.user_id, req.file_path))
+    row = cursor.fetchone()
+
+    if row:
+        # 已经收藏了？那就取消收藏（删除记录）
+        cursor.execute("DELETE FROM favorites WHERE id=?", (row[0],))
+        msg = "已取消收藏 💔"
+        status = "removed"
+    else:
+        # 没收藏？那就加进收藏夹
+        cursor.execute("INSERT INTO favorites (user_id, file_path, title, artist) VALUES (?, ?, ?, ?)",
+                       (req.user_id, req.file_path, req.title, req.artist))
+        msg = "收藏成功！❤️"
+        status = "added"
+
+    conn.commit()
+    conn.close()
+    return {"code": 200, "message": msg, "data": {"status": status}}
+
+
+# ==========================================
+# 🌟 获取用户的专属收藏夹列表
+# ==========================================
+@app.get("/favorites/{user_id}")
+async def get_favorites(user_id: int):
+    conn = sqlite3.connect("music_hash.db")
+    cursor = conn.cursor()
+
+    # 只查属于这个用户的歌
+    cursor.execute("SELECT title, artist, file_path FROM favorites WHERE user_id=?", (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+
+    results = []
+    for row in rows:
+        title, artist, file_path = row
+        # 这里同样需要把本地路径翻译成前端能播放的 URL
+        normalized_path = file_path.replace("\\", "/")
+        audio_url = "/audio/" + normalized_path.split("raw/")[-1] if "raw/" in normalized_path else ""
+
+        results.append({
+            "title": title,
+            "artist": artist,
+            "file_path": file_path,
+            "audio_url": audio_url
+        })
+
+    return {"code": 200, "data": results}
+
 @app.post("/search")
 async def api_search_music(file: UploadFile = File(...)):
     """
@@ -38,7 +204,7 @@ async def api_search_music(file: UploadFile = File(...)):
     try:
         # 2. 调用你之前写好的核心搜索逻辑 [cite: 378-379]
         # 这里默认返回最相似的 5 首歌
-        results = search_music(temp_file_path, INDEX, MODEL, top_k=5)
+        results = search_music(temp_file_path, INDEX, MODEL)
 
         # 3. 构造标准的 JSON 格式返回给前端 [cite: 122-123]
         return {
