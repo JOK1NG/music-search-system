@@ -60,6 +60,10 @@ app = FastAPI(title="音乐音频相似度检索系统 API")
 async def serve_frontend():
     return FileResponse("./index.html")
 
+@app.get("/favicon.svg", include_in_schema=False)
+async def serve_favicon():
+    return FileResponse("./favicon.svg")
+
 # 🌟 把本地的 ./data/raw 文件夹，挂载到网址的 /audio 路径下
 app.mount("/audio", StaticFiles(directory="./data/raw"), name="audio")
 
@@ -92,6 +96,19 @@ def init_user_db():
             title TEXT,
             artist TEXT,
             UNIQUE(user_id, file_path) 
+        )
+    ''')
+    # 3. 创建搜索历史表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS search_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            query_filename TEXT,
+            top_title TEXT,
+            top_artist TEXT,
+            top_audio_url TEXT,
+            top_file_path TEXT,
+            searched_at TEXT DEFAULT (datetime('now', 'localtime'))
         )
     ''')
     conn.commit()
@@ -251,9 +268,13 @@ async def get_favorites(user_id: int, authorization: Optional[str] = Header(None
     return {"code": 200, "data": results}
 
 @app.post("/search")
-async def api_search_music(file: UploadFile = File(...)):
+async def api_search_music(
+    file: UploadFile = File(...),
+    authorization: Optional[str] = Header(None)   # 可选，不强制要求登录
+):
     """
-    接收前端上传的音频文件，进行听歌识曲
+    接收前端上传的音频文件，进行听歌识曲。
+    已登录用户的搜索记录会自动写入历史表。
     """
     # 1. 将用户上传的音频临时存到本地
     temp_file_path = f"temp_{file.filename}"
@@ -261,26 +282,82 @@ async def api_search_music(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     try:
-        # 2. 调用你之前写好的核心搜索逻辑 [cite: 378-379]
-        # 这里默认返回最相似的 5 首歌
+        # 2. 调用核心搜索逻辑，默认返回最相似的 5 首歌
         results = search_music(temp_file_path, INDEX, MODEL)
 
-        # 3. 构造标准的 JSON 格式返回给前端 [cite: 122-123]
-        return {
-            "code": 200,
-            "message": "检索成功",
-            "data": results
-        }
+        # 🌟 已登录用户：静默记录搜索历史（失败不影响检索结果返回）
+        if authorization and authorization.startswith("Bearer "):
+            try:
+                user = get_current_user(authorization)
+                top = results[0] if results else None
+                conn = sqlite3.connect("music_hash.db")
+                conn.execute(
+                    "INSERT INTO search_history (user_id, query_filename, top_title, top_artist, top_audio_url, top_file_path) VALUES (?,?,?,?,?,?)",
+                    (
+                        user["user_id"],
+                        file.filename,
+                        top["title"]     if top else None,
+                        top["artist"]    if top else None,
+                        top["audio_url"] if top else None,
+                        top["file_path"] if top else None,
+                    )
+                )
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass  # 静默失败，不影响主流程
+
+        return {"code": 200, "message": "检索成功", "data": results}
+
     except Exception as e:
-        return {
-            "code": 500,
-            "message": f"处理音频时发生错误: {str(e)}",
-            "data": []
-        }
+        return {"code": 500, "message": f"处理音频时发生错误: {str(e)}", "data": []}
     finally:
-        # 4. 无论成功与否，都要把临时文件删掉，防止服务器硬盘被撑爆
+        # 3. 无论成功与否，都要把临时文件删掉，防止服务器硬盘被撑爆
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
+
+
+# ==========================================
+# 🌟 搜索历史接口（JWT 鉴权）
+# ==========================================
+@app.get("/history")
+async def get_history(authorization: Optional[str] = Header(None)):
+    """获取当前用户最近 50 条搜索历史，按时间倒序"""
+    user = get_current_user(authorization)
+    conn = sqlite3.connect("music_hash.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        """SELECT query_filename, top_title, top_artist, top_audio_url, top_file_path, searched_at
+           FROM search_history WHERE user_id=?
+           ORDER BY id DESC LIMIT 50""",
+        (user["user_id"],)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return {
+        "code": 200,
+        "data": [
+            {
+                "query_filename": r[0],
+                "top_title":      r[1],
+                "top_artist":     r[2],
+                "top_audio_url":  r[3],
+                "top_file_path":  r[4],
+                "searched_at":    r[5],
+            } for r in rows
+        ]
+    }
+
+
+@app.delete("/history")
+async def clear_history(authorization: Optional[str] = Header(None)):
+    """清空当前用户的全部搜索历史"""
+    user = get_current_user(authorization)
+    conn = sqlite3.connect("music_hash.db")
+    conn.execute("DELETE FROM search_history WHERE user_id=?", (user["user_id"],))
+    conn.commit()
+    conn.close()
+    return {"code": 200, "message": "搜索历史已清空"}
 
 
 if __name__ == "__main__":

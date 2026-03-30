@@ -706,13 +706,138 @@
             opacity: 1;
         }
 
-        /* MacOS 居于卡片内的 Native播放器覆写 */
-        audio {
+        /* 迷你播放器不再需要原生 audio 样式覆写 */
+
+        /* ========================================= */
+        /* 🎵 播放按钮 (结果条目内联) */
+        /* ========================================= */
+        .play-btn {
+            background: var(--btn-dark);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            font-size: 14px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+        }
+        .play-btn:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3); }
+        .play-btn:active { transform: scale(0.94); }
+        .play-btn.playing { background: #6366f1; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4); }
+
+        /* ========================================= */
+        /* 🎵 底部迷你播放器 */
+        /* ========================================= */
+        .mini-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-top: 1px solid rgba(0, 0, 0, 0.07);
+            padding: 0 28px;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.06);
+            animation: slideUpPlayer 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUpPlayer {
+            from { transform: translateY(100%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        .mini-player-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .mini-player-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-hero);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mini-player-artist {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mini-player-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .mini-ctrl-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            transition: background 0.15s;
+            line-height: 1;
+        }
+        .mini-ctrl-btn:hover { background: rgba(0,0,0,0.06); }
+        .mini-play-btn {
+            background: var(--btn-dark);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(15,23,42,0.2);
+        }
+        .mini-play-btn:hover { transform: scale(1.08); }
+        .mini-progress-wrap {
+            flex: 2;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .mini-progress-bar {
             width: 100%;
-            height: 44px;
-            margin-top: 20px;
-            outline: none;
-            border-radius: 12px;
+            height: 3px;
+            background: rgba(0,0,0,0.08);
+            border-radius: 99px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .mini-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #a78bfa);
+            border-radius: 99px;
+            transition: width 0.3s linear;
+        }
+        .mini-progress-time {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
         }
 
         /* ========================================= */
@@ -893,6 +1018,7 @@
             <div class="user-actions">
                 <template v-if="currentUser">
                     <span class="user-info">{{ currentUser.username }}</span>
+                    <button class="btn-fav-nav" @click="openHistory">🕐 历史</button>
                     <button class="btn-fav-nav" @click="showFavModal = true">❤️ 收藏夹</button>
                     <button class="btn-secondary" @click="logout">登出</button>
                 </template>
@@ -967,17 +1093,58 @@
                     空空如也
                 </div>
                 <div class="result-item" v-for="(song, index) in favList" :key="index" style="padding: 15px 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
                         <div class="song-info">
                             <div class="song-title-row">
                                 <h3 style="font-size: 16px;">{{ song.title }}</h3>
                             </div>
                             <p>{{ song.artist }}</p>
                         </div>
+                        <button class="play-btn" :class="{ playing: currentTrack?.file_path === song.file_path && isPlaying }"
+                            @click="playTrack(song)" style="margin-left:0;">
+                            {{ currentTrack?.file_path === song.file_path && isPlaying ? '⏸' : '▶' }}
+                        </button>
                         <button class="heart-btn active" @click="toggleFav(song)">❤️</button>
                     </div>
-                    <audio v-if="song.audio_url" controls controlsList="nodownload"
-                        :src="API_BASE + song.audio_url" style="height:36px;"></audio>
+                </div>
+            </div>
+        </div>
+
+        <!-- 搜索历史悬浮层 -->
+        <div class="modal-overlay" v-if="showHistoryModal" @click.self="showHistoryModal = false">
+            <div class="modal-content wide">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                    <h2 class="modal-title modal-subtitle" style="margin:0;">搜索历史</h2>
+                    <button v-if="historyList.length > 0" @click="clearHistory"
+                        style="background:none;border:none;color:#ef4444;font-size:13px;font-weight:600;cursor:pointer;padding:4px 10px;border-radius:8px;transition:background 0.15s;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.08)'"
+                        onmouseout="this.style.background='none'">
+                        🗑 清空历史
+                    </button>
+                </div>
+                <div v-if="historyList.length === 0" class="empty-state">暂无搜索记录</div>
+                <div class="result-item" v-for="(item, index) in historyList" :key="index" style="padding: 14px 0;">
+                    <div style="display:flex; align-items:center; gap: 10px;">
+                        <button v-if="item.top_audio_url" class="play-btn"
+                            :class="{ playing: currentTrack?.file_path === item.top_file_path && isPlaying }"
+                            @click="playTrack({ title: item.top_title, artist: item.top_artist, audio_url: item.top_audio_url, file_path: item.top_file_path })">
+                            {{ currentTrack?.file_path === item.top_file_path && isPlaying ? '⏸' : '▶' }}
+                        </button>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:14px;font-weight:700;color:var(--text-hero);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                {{ item.top_title || '未知曲目' }}
+                            </div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
+                                {{ item.top_artist || '未知艺术家' }}
+                            </div>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <div style="font-size:11px;color:#94a3b8;font-weight:500;">{{ item.searched_at }}</div>
+                            <div style="font-size:11px;color:#cbd5e1;margin-top:2px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" :title="item.query_filename">
+                                📎 {{ item.query_filename }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1007,35 +1174,58 @@
 
             <div class="card-body">
                 <div class="result-item" v-for="res in results" :key="res.rank">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; align-items: center; flex-grow: 1;">
-                            <div class="rank">{{ res.rank }}</div>
-                            <div class="song-info">
-                                <div class="song-title-row">
-                                    <h3>{{ res.title }}</h3>
-                                    <button class="heart-btn" :class="{ 'active': favSet.has(res.file_path) }"
-                                        @click="toggleFav(res)">
-                                        ❤️
-                                    </button>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <p>{{ res.artist }}</p>
-                                    <span class="score">Hamming [ {{ res.distance }} bit ]</span>
-                                </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="rank">{{ res.rank }}</div>
+                        <button class="play-btn" :class="{ playing: currentTrack?.file_path === res.file_path && isPlaying }"
+                            @click="playTrack(res)">
+                            {{ currentTrack?.file_path === res.file_path && isPlaying ? '⏸' : '▶' }}
+                        </button>
+                        <div class="song-info">
+                            <div class="song-title-row">
+                                <h3>{{ res.title }}</h3>
+                                <button class="heart-btn" :class="{ 'active': favSet.has(res.file_path) }"
+                                    @click="toggleFav(res)">❤️</button>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <p>{{ res.artist }}</p>
+                                <span class="score">Hamming [ {{ res.distance }} bit ]</span>
                             </div>
                         </div>
                     </div>
-                    <audio v-if="res.audio_url" controls controlsList="nodownload"
-                        :src="API_BASE + res.audio_url"></audio>
                 </div>
             </div>
         </div>
 
-    </div>
+        <!-- 🎵 底部迷你播放器 (放在 #app 内部，v-if 才能生效) -->
+        <div class="mini-player" v-if="currentTrack" id="mini-player">
+            <div class="mini-player-info">
+                <div class="mini-player-title">{{ currentTrack.title }}</div>
+                <div class="mini-player-artist">{{ currentTrack.artist }}</div>
+            </div>
+            <div class="mini-player-controls">
+                <button class="mini-ctrl-btn" @click="playPrev" title="上一首">⏮</button>
+                <button class="mini-play-btn" @click="togglePlay">
+                    {{ isPlaying ? '⏸' : '▶' }}
+                </button>
+                <button class="mini-ctrl-btn" @click="playNext" title="下一首">⏭</button>
+            </div>
+            <div class="mini-progress-wrap">
+                <div class="mini-progress-bar" @click="seekTo($event)">
+                    <div class="mini-progress-fill" :style="{ width: progressPct + '%' }"></div>
+                </div>
+                <div class="mini-progress-time">
+                    <span>{{ formatTime(currentTime) }}</span>
+                    <span>{{ formatTime(duration) }}</span>
+                </div>
+            </div>
+            <button class="mini-ctrl-btn" @click="closePlayer" title="关闭">✕</button>
+        </div>
+
+    </div><!-- /#app 结束 -->
 
     <!-- 🧠 前端大脑：Vue 组件体系 -->
     <script>
-        const { createApp, ref, onMounted } = Vue;
+        const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
 
         createApp({
             setup() {
@@ -1048,6 +1238,23 @@
                 const isSearching = ref(false);
                 const results = ref([]);
                 let wavesurfer = null;
+
+                // ==========================================
+                // 🎵 全局单例播放器状态
+                // ==========================================
+                let audioEl = null;                    // HTML Audio 单例
+                const currentTrack = ref(null);        // 当前播放曲目对象
+                const isPlaying = ref(false);
+                const currentTime = ref(0);
+                const duration = ref(0);
+                const progressPct = computed(() =>
+                    duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0
+                );
+
+                const formatTime = (s) => {
+                    s = Math.floor(s || 0);
+                    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+                };
 
                 const currentUser = ref(null);
                 const authToken = ref(null);  // 🔐 JWT 令牌
@@ -1073,6 +1280,26 @@
                 const authHeaders = () => ({
                     headers: { 'Authorization': `Bearer ${authToken.value}` }
                 });
+
+                // 🕐 搜索历史状态
+                const showHistoryModal = ref(false);
+                const historyList = ref([]);
+
+                const openHistory = async () => {
+                    if (!authToken.value) return;
+                    try {
+                        const res = await axios.get(`${API_BASE}/history`, authHeaders());
+                        if (res.data.code === 200) historyList.value = res.data.data;
+                    } catch (e) { }
+                    showHistoryModal.value = true;
+                };
+
+                const clearHistory = async () => {
+                    try {
+                        await axios.delete(`${API_BASE}/history`, authHeaders());
+                        historyList.value = [];
+                    } catch (e) { }
+                };
 
                 onMounted(() => {
                     // 恢复登录态（用户信息 + JWT 令牌）
@@ -1167,6 +1394,74 @@
                     } catch (e) { customAlert("找不到代理入口。", "断开"); }
                 };
 
+                // ==========================================
+                // 🎵 播放器核心方法
+                // ==========================================
+                const initAudio = () => {
+                    if (audioEl) return;
+                    audioEl = new Audio();
+                    audioEl.addEventListener('timeupdate', () => { currentTime.value = audioEl.currentTime; });
+                    audioEl.addEventListener('loadedmetadata', () => { duration.value = audioEl.duration; });
+                    audioEl.addEventListener('ended', () => { isPlaying.value = false; playNext(); });
+                    audioEl.addEventListener('play', () => { isPlaying.value = true; });
+                    audioEl.addEventListener('pause', () => { isPlaying.value = false; });
+                };
+
+                const playTrack = (track) => {
+                    if (!track.audio_url) return;
+                    initAudio();
+                    // 同一首歌：切换播放/暂停
+                    if (currentTrack.value?.file_path === track.file_path) {
+                        togglePlay();
+                        return;
+                    }
+                    // 切换新曲目
+                    currentTrack.value = track;
+                    audioEl.src = API_BASE + track.audio_url;
+                    currentTime.value = 0;
+                    duration.value = 0;
+                    audioEl.play();
+                };
+
+                const togglePlay = () => {
+                    if (!audioEl) return;
+                    isPlaying.value ? audioEl.pause() : audioEl.play();
+                };
+
+                // 上一首 / 下一首（在搜索结果列表内循环）
+                const getTrackList = () => {
+                    const r = results.value.filter(r => r.audio_url);
+                    const f = favList.value.filter(s => s.audio_url);
+                    return [...r, ...f];
+                };
+                const playPrev = () => {
+                    const list = getTrackList();
+                    if (!list.length || !currentTrack.value) return;
+                    const idx = list.findIndex(t => t.file_path === currentTrack.value.file_path);
+                    playTrack(list[(idx - 1 + list.length) % list.length]);
+                };
+                const playNext = () => {
+                    const list = getTrackList();
+                    if (!list.length || !currentTrack.value) return;
+                    const idx = list.findIndex(t => t.file_path === currentTrack.value.file_path);
+                    playTrack(list[(idx + 1) % list.length]);
+                };
+
+                const seekTo = (e) => {
+                    if (!audioEl || !duration.value) return;
+                    const bar = e.currentTarget;
+                    const pct = e.offsetX / bar.clientWidth;
+                    audioEl.currentTime = pct * duration.value;
+                };
+
+                const closePlayer = () => {
+                    if (audioEl) { audioEl.pause(); audioEl.src = ''; }
+                    currentTrack.value = null;
+                    isPlaying.value = false;
+                    currentTime.value = 0;
+                    duration.value = 0;
+                };
+
                 const handleFileUpload = (event) => {
                     const file = event.target.files[0];
                     if (file) { selectedFile.value = file; results.value = []; wavesurfer.load(URL.createObjectURL(file)); }
@@ -1175,9 +1470,13 @@
                 const searchMusic = async () => {
                     if (!selectedFile.value) return;
                     isSearching.value = true;
-                    const formData = new FormData(); formData.append('file', selectedFile.value);
+                    const formData = new FormData();
+                    formData.append('file', selectedFile.value);
                     try {
-                        const response = await axios.post(`${API_BASE}/search`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                        // 🔐 已登录时附带 token，后端会自动记录历史
+                        const headers = { 'Content-Type': 'multipart/form-data' };
+                        if (authToken.value) headers['Authorization'] = `Bearer ${authToken.value}`;
+                        const response = await axios.post(`${API_BASE}/search`, formData, { headers });
                         if (response.data.code === 200) results.value = response.data.data;
                         else customAlert("引擎核心坍缩: " + response.data.message, "降维阻断");
                     } catch (e) { customAlert("宿主机守护进程无响应，Faiss 库未唤醒。", "失联"); }
@@ -1187,7 +1486,11 @@
                 return {
                     API_BASE, selectedFile, isSearching, results, handleFileUpload, searchMusic,
                     currentUser, showAuthModal, authMode, authForm, openAuth, logout, submitAuth,
-                    showFavModal, favList, favSet, toggleFav, customAlert, showAlertModal, alertTitle, alertMessage
+                    showFavModal, favList, favSet, toggleFav, customAlert, showAlertModal, alertTitle, alertMessage,
+                    showHistoryModal, historyList, openHistory, clearHistory,
+                    // 🎵 播放器状态与方法
+                    currentTrack, isPlaying, progressPct, currentTime, duration,
+                    formatTime, playTrack, togglePlay, playPrev, playNext, seekTo, closePlayer
                 }
             }
         }).mount('#app');
