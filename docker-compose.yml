@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  music-search:
+    build: .
+    container_name: music_search_system
+    # 你指定的映射要求：外部 80，映射到内容器的 8000 端口
+    ports:
+      - "80:8000"
+    volumes:
+      # 【核心策略】将宿主机的数据挂载到容器内，实现持久化和热更新
+      - ./data:/app/data
+      - ./checkpoints:/app/checkpoints
+      # 单独挂载核心状态文件（必须保证宿主机在启动时已包含这两个文件）
+      - ./music_hash.db:/app/music_hash.db
+      - ./music_hash.index:/app/music_hash.index
+    environment:
+      # 设置生产环境的 JWT 鉴权私钥
+      - JWT_SECRET=TencentCloud_Production_Secret_ChangeMe
+      # 如果后续启用 GPU 推理，这行可解除限制
+      # - OMP_NUM_THREADS=4
+    restart: always # 出现宕机或重启服务器时，Docker 自动将其拉起
