@@ -12,7 +12,19 @@ def train():
 
     # 1. 加载数据集
     dataset = AudioTripletDataset("./data/raw")
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=0)
+    # 🌟 RTX 4080 优化：
+    #   batch_size=64  → 16GB 显存充裕，翻倍提升 GPU 利用率
+    #   num_workers=4  → 4 个子进程并行预加载数据，GPU 不用等 CPU 解码
+    #   pin_memory=True → 锁页内存，CPU→GPU 传输更快
+    # ⚠️  Windows 上 num_workers > 0 需要在 if __name__ == "__main__" 块内运行（已满足）
+    use_gpu = device.type == "cuda"
+    dataloader = DataLoader(
+        dataset,
+        batch_size=64,
+        shuffle=True,
+        num_workers=4 if use_gpu else 0,
+        pin_memory=use_gpu
+    )
 
     # 2. 初始化 8 缸发动机网络
     model = AudioHashNet().to(device)
@@ -24,7 +36,10 @@ def train():
     learning_rate = 1e-5
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    # 🌟 核心修正 3：只需 3 轮康复训练
+    # 🌟 核心修正 3：Epoch 数建议
+    #   8,000  首 → 3 epochs (当前默认)
+    #   25,000 首 → 5~8 epochs
+    #   100,000首 → 3~5 epochs
     num_epochs = 3
 
     print(f"🔥 开始康复训练！学习率: {learning_rate}, 及格线: 5.0")
