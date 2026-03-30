@@ -977,7 +977,7 @@
                         <button class="heart-btn active" @click="toggleFav(song)">❤️</button>
                     </div>
                     <audio v-if="song.audio_url" controls controlsList="nodownload"
-                        :src="'http://127.0.0.1:8000' + song.audio_url" style="height:36px;"></audio>
+                        :src="API_BASE + song.audio_url" style="height:36px;"></audio>
                 </div>
             </div>
         </div>
@@ -1026,7 +1026,7 @@
                         </div>
                     </div>
                     <audio v-if="res.audio_url" controls controlsList="nodownload"
-                        :src="'http://127.0.0.1:8000' + res.audio_url"></audio>
+                        :src="API_BASE + res.audio_url"></audio>
                 </div>
             </div>
         </div>
@@ -1039,12 +1039,18 @@
 
         createApp({
             setup() {
+                // ==========================================
+                // 🌟 API 地址自动推断（本地/服务器零配置切换）
+                // ==========================================
+                const API_BASE = window.location.origin;
+
                 const selectedFile = ref(null);
                 const isSearching = ref(false);
                 const results = ref([]);
                 let wavesurfer = null;
 
                 const currentUser = ref(null);
+                const authToken = ref(null);  // 🔐 JWT 令牌
                 const showAuthModal = ref(false);
                 const authMode = ref('login');
                 const authForm = ref({ username: '', password: '' });
@@ -1063,10 +1069,18 @@
                 const favList = ref([]);
                 const favSet = ref(new Set());
 
+                // 🔐 生成带鉴权头的 axios 配置
+                const authHeaders = () => ({
+                    headers: { 'Authorization': `Bearer ${authToken.value}` }
+                });
+
                 onMounted(() => {
+                    // 恢复登录态（用户信息 + JWT 令牌）
                     const savedUser = localStorage.getItem('music_app_user');
-                    if (savedUser) {
+                    const savedToken = localStorage.getItem('music_app_token');
+                    if (savedUser && savedToken) {
                         currentUser.value = JSON.parse(savedUser);
+                        authToken.value = savedToken;
                         fetchFavorites();
                     }
 
@@ -1086,9 +1100,12 @@
                 });
 
                 const fetchFavorites = async () => {
-                    if (!currentUser.value) return;
+                    if (!currentUser.value || !authToken.value) return;
                     try {
-                        const res = await axios.get(`http://127.0.0.1:8000/favorites/${currentUser.value.user_id}`);
+                        const res = await axios.get(
+                            `${API_BASE}/favorites/${currentUser.value.user_id}`,
+                            authHeaders()
+                        );
                         if (res.data.code === 200) {
                             favList.value = res.data.data;
                             favSet.value = new Set(favList.value.map(item => item.file_path));
@@ -1097,19 +1114,18 @@
                 };
 
                 const toggleFav = async (song) => {
-                    if (!currentUser.value) {
+                    if (!currentUser.value || !authToken.value) {
                         customAlert("记录操作失败，宿主当前未被允许接入持久层存储节点，请先验证登入身份。", "云端权限");
                         openAuth('login');
                         return;
                     }
                     try {
-                        const res = await axios.post('http://127.0.0.1:8000/favorite/toggle', {
-                            user_id: currentUser.value.user_id,
-                            file_path: song.file_path,
-                            title: song.title,
-                            artist: song.artist
-                        });
-
+                        const res = await axios.post(
+                            `${API_BASE}/favorite/toggle`,
+                            // 🔐 user_id 由后端从 JWT 提取，此处无需传递
+                            { file_path: song.file_path, title: song.title, artist: song.artist },
+                            authHeaders()
+                        );
                         if (res.data.code === 200) fetchFavorites();
                     } catch (e) { }
                 };
@@ -1118,20 +1134,28 @@
 
                 const logout = () => {
                     currentUser.value = null;
+                    authToken.value = null;
                     localStorage.removeItem('music_app_user');
+                    localStorage.removeItem('music_app_token');
                     favList.value = [];
                     favSet.value.clear();
                 };
 
                 const submitAuth = async () => {
                     if (!authForm.value.username || !authForm.value.password) return customAlert("检测到密钥为空，鉴权通道阻断。", "缺失");
-                    const url = authMode.value === 'login' ? 'http://127.0.0.1:8000/login' : 'http://127.0.0.1:8000/register';
+                    const url = authMode.value === 'login' ? `${API_BASE}/login` : `${API_BASE}/register`;
                     try {
                         const response = await axios.post(url, { username: authForm.value.username, password: authForm.value.password });
                         if (response.data.code === 200) {
                             if (authMode.value === 'login') {
-                                currentUser.value = response.data.data;
+                                currentUser.value = {
+                                    user_id: response.data.data.user_id,
+                                    username: response.data.data.username
+                                };
+                                // 🔐 保存 JWT 令牌
+                                authToken.value = response.data.data.access_token;
                                 localStorage.setItem('music_app_user', JSON.stringify(currentUser.value));
+                                localStorage.setItem('music_app_token', authToken.value);
                                 showAuthModal.value = false;
                                 fetchFavorites();
                             } else {
@@ -1153,7 +1177,7 @@
                     isSearching.value = true;
                     const formData = new FormData(); formData.append('file', selectedFile.value);
                     try {
-                        const response = await axios.post('http://127.0.0.1:8000/search', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                        const response = await axios.post(`${API_BASE}/search`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                         if (response.data.code === 200) results.value = response.data.data;
                         else customAlert("引擎核心坍缩: " + response.data.message, "降维阻断");
                     } catch (e) { customAlert("宿主机守护进程无响应，Faiss 库未唤醒。", "失联"); }
@@ -1161,7 +1185,7 @@
                 };
 
                 return {
-                    selectedFile, isSearching, results, handleFileUpload, searchMusic,
+                    API_BASE, selectedFile, isSearching, results, handleFileUpload, searchMusic,
                     currentUser, showAuthModal, authMode, authForm, openAuth, logout, submitAuth,
                     showFavModal, favList, favSet, toggleFav, customAlert, showAlertModal, alertTitle, alertMessage
                 }

@@ -1,21 +1,66 @@
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # 修复 macOS ARM64 上 PyTorch + Faiss 的 OpenMP 冲突崩溃
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"   # 修复 macOS ARM64 OpenMP 冲突崩溃
+os.environ["OMP_NUM_THREADS"] = "1"            # 防止 PyTorch 在 uvicorn 线程中引发 SIGSEGV
+os.environ["MKL_NUM_THREADS"] = "1"            # 同上，限制 MKL 线程
 
 import shutil
 import uvicorn
 import sqlite3
+import jwt
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from pydantic import BaseModel
 import bcrypt
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 # 导入你刚刚写好的终极版搜索器
 from search import load_system, search_music
 
+# ==========================================
+# 🔐 JWT 配置区
+# ==========================================
+# 生产环境部署时，请通过环境变量 JWT_SECRET 设置一个强随机密钥：
+#   export JWT_SECRET="your-super-secret-key-here"
+JWT_SECRET = os.environ.get("JWT_SECRET", "vectortune-dev-secret-change-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_DAYS = 7  # 令牌有效期：7 天
+
+
+def create_access_token(user_id: int, username: str) -> str:
+    """生成 JWT 访问令牌"""
+    expire = datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRE_DAYS)
+    payload = {
+        "sub": str(user_id),
+        "username": username,
+        "exp": expire
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
+    """从请求头提取并验证 JWT，返回用户信息字典"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="未登录，请先登录后再操作")
+    token = authorization.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return {"user_id": int(payload["sub"]), "username": payload["username"]}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="登录已过期，请重新登录")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="无效的身份令牌")
+
 app = FastAPI(title="音乐音频相似度检索系统 API")
 
-# 🌟 新增：把本地的 ./data/raw 文件夹，挂载到网址的 /audio 路径下
+# 🌟 前端入口：GET / 直接返回 index.html（让 window.location.origin 能正确推断 API 地址）
+@app.get("/", include_in_schema=False)
+async def serve_frontend():
+    return FileResponse("./index.html")
+
+# 🌟 把本地的 ./data/raw 文件夹，挂载到网址的 /audio 路径下
 app.mount("/audio", StaticFiles(directory="./data/raw"), name="audio")
 
 # ==========================================
@@ -115,36 +160,43 @@ async def login(user: UserReq):
     if not bcrypt.checkpw(user.password.encode('utf-8'), hashed_password.encode('utf-8')):
         return {"code": 400, "message": "密码错误，再想想？"}
 
+    # 🌟 生成 JWT 令牌，有效期 7 天
+    access_token = create_access_token(user_id=user_id, username=user.username)
+
     return {
         "code": 200,
         "message": "登录成功！",
         "data": {
             "user_id": user_id,
-            "username": user.username
+            "username": user.username,
+            "access_token": access_token
         }
     }
 
 
 # ==========================================
-# 🌟 收藏系统专用数据模型
+# 🌟 收藏系统专用数据模型 (user_id 从 JWT 提取，不再信任前端传值)
 # ==========================================
 class FavoriteReq(BaseModel):
-    user_id: int
     file_path: str
     title: str
     artist: str
 
 
 # ==========================================
-# 🌟 收藏 / 取消收藏 (智能切换接口)
+# 🌟 收藏 / 取消收藏 (JWT 鉴权版)
 # ==========================================
 @app.post("/favorite/toggle")
-async def toggle_favorite(req: FavoriteReq):
+async def toggle_favorite(req: FavoriteReq, authorization: Optional[str] = Header(None)):
+    # 从 JWT 中安全提取 user_id，不信任前端传来的数值
+    current_user = get_current_user(authorization)
+    user_id = current_user["user_id"]
+
     conn = sqlite3.connect("music_hash.db")
     cursor = conn.cursor()
 
     # 先查一下这首歌这个用户是不是已经收藏过了
-    cursor.execute("SELECT id FROM favorites WHERE user_id=? AND file_path=?", (req.user_id, req.file_path))
+    cursor.execute("SELECT id FROM favorites WHERE user_id=? AND file_path=?", (user_id, req.file_path))
     row = cursor.fetchone()
 
     if row:
@@ -155,7 +207,7 @@ async def toggle_favorite(req: FavoriteReq):
     else:
         # 没收藏？那就加进收藏夹
         cursor.execute("INSERT INTO favorites (user_id, file_path, title, artist) VALUES (?, ?, ?, ?)",
-                       (req.user_id, req.file_path, req.title, req.artist))
+                       (user_id, req.file_path, req.title, req.artist))
         msg = "收藏成功！❤️"
         status = "added"
 
@@ -165,10 +217,15 @@ async def toggle_favorite(req: FavoriteReq):
 
 
 # ==========================================
-# 🌟 获取用户的专属收藏夹列表
+# 🌟 获取用户的专属收藏夹列表 (JWT 鉴权版)
 # ==========================================
 @app.get("/favorites/{user_id}")
-async def get_favorites(user_id: int):
+async def get_favorites(user_id: int, authorization: Optional[str] = Header(None)):
+    # 验证 JWT，并确保只能查自己的收藏夹
+    current_user = get_current_user(authorization)
+    if current_user["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="无权访问他人的收藏夹")
+
     conn = sqlite3.connect("music_hash.db")
     cursor = conn.cursor()
 

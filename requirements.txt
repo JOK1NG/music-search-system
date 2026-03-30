@@ -2,6 +2,7 @@ fastapi
 uvicorn
 pydantic
 bcrypt
+PyJWT
 librosa
 torch
 numpy

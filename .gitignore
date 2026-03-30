@@ -6,8 +6,12 @@ data/raw
 
 （已压缩）Gemini-毕业设计_9-419.pdf
 .vscode/settings.json
-__pycache__/dataset.cpython-311.pyc
-__pycache__/model.cpython-311.pyc
-__pycache__/search.cpython-311.pyc
+
+# Python 字节码缓存（所有版本）
+__pycache__/
+*.pyc
+*.pyo
+
 .idea/workspace.xml
 music_hash.db
+(完整版)音乐音频相似度检索系统_技术架构与实现分析_副本.md
