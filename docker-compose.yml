@@ -4,9 +4,9 @@ services:
   music-search:
     build: .
     container_name: music_search_system
-    # 你指定的映射要求：外部 80，映射到内容器的 8000 端口
-    ports:
-      - "80:8000"
+    # 不再直接对外暴露端口，改由 Caddy 反向代理统一处理 SSL 加密
+    expose:
+      - "8000"
     volumes:
       # 【核心策略】将宿主机的数据挂载到容器内，实现持久化和热更新
       - ./data:/app/data
@@ -20,3 +20,23 @@ services:
       # 如果后续启用 GPU 推理，这行可解除限制
       # - OMP_NUM_THREADS=4
     restart: always # 出现宕机或重启服务器时，Docker 自动将其拉起
+
+  # 🔒 Caddy 反向代理：自动申请 & 续期 SSL 证书，实现 HTTPS 加密访问
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy_proxy
+    ports:
+      - "80:80"     # HTTP（会被 Caddy 自动跳转到 HTTPS）
+      - "443:443"   # HTTPS（SSL 加密访问）
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile   # Caddy 的配置文件
+      - caddy_data:/data                    # SSL 证书持久化存储（自动续期）
+      - caddy_config:/config
+    depends_on:
+      - music-search
+    restart: always
+
+# Caddy 证书数据卷（不要删除，否则证书丢失需重新申请）
+volumes:
+  caddy_data:
+  caddy_config:
