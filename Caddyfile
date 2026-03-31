@@ -1,3 +1,3 @@
-evanesce.site {
+evanesce.site, www.evanesce.site {
     reverse_proxy music-search:8000
 }
