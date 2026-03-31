@@ -1,6 +1,9 @@
 # Python 虚拟环境
 .venv/
 
+# macOS 系统文件
+.DS_Store
+
 # 音频数据集
 data/raw
 
@@ -15,3 +18,6 @@ __pycache__/
 .idea/
 music_hash.db
 (完整版)音乐音频相似度检索系统_技术架构与实现分析_副本.md
+
+# Docker 离线依赖包（仅部署时使用，不入库）
+wheels/

@@ -10,12 +10,14 @@ RUN apt-get update && \
     libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
-# 先复制依赖文件并安装（利用 Docker 缓存层加速构建）
-COPY requirements.txt .
-# 使用清华大学的 pip 镜像源加速下载
-RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 将本地预下载好的依赖包复制进容器（彻底绕开服务器龟速网络）
+COPY wheels/ /tmp/wheels/
 
-# 将代码复制进容器（由于我们在 .dockerignore 中排除了一些文件夹，这里只会打包纯项目代码文件）
+# 直接从本地 .whl 文件安装所有依赖，零网络下载
+RUN pip install --no-cache-dir --no-index --find-links=/tmp/wheels/ /tmp/wheels/*.whl \
+    && rm -rf /tmp/wheels
+
+# 将代码复制进容器
 COPY . .
 
 # 暴露给容器外的端口
