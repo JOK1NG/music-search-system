@@ -13,9 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate docker-compose config
-        run: docker compose config --quiet
-
       - name: Ensure .env.example is in sync with docker-compose
         run: |
           # Every variable referenced as ${VAR} in docker-compose.yml
@@ -29,8 +26,11 @@ jobs:
           done
           echo "All docker-compose variables are documented in .env.example"
 
-      - name: Copy .env.example to .env for config validation
-        run: cp .env.example .env
+      - name: Validate docker-compose config
+        run: |
+          # Create .env from example so variable interpolation works
+          cp .env.example .env
+          docker compose config --quiet
 
   lint:
     name: Python Lint
