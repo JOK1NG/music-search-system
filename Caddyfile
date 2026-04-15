@@ -1,3 +1,19 @@
 evanesce.site, www.evanesce.site {
+    # Transparent compression for text-based responses
+    encode gzip
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+
+    # Upload limit for audio files (default 512MB is too generous)
+    request_body {
+        max_size 50MB
+    }
+
     reverse_proxy music-search:8000
 }

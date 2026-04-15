@@ -14,9 +14,11 @@ services:
       # 单独挂载核心状态文件（必须保证宿主机在启动时已包含这两个文件）
       - ./music_hash.db:/app/music_hash.db
       - ./music_hash.index:/app/music_hash.index
+    env_file:
+      - .env
     environment:
-      # 设置生产环境的 JWT 鉴权私钥
-      - JWT_SECRET=TencentCloud_Production_Secret_ChangeMe
+      # 从 .env 文件读取 JWT_SECRET（见 .env.example）
+      - JWT_SECRET=${JWT_SECRET}
       # 如果后续启用 GPU 推理，这行可解除限制
       # - OMP_NUM_THREADS=4
     restart: always # 出现宕机或重启服务器时，Docker 自动将其拉起
@@ -33,7 +35,8 @@ services:
       - caddy_data:/data                    # SSL 证书持久化存储（自动续期）
       - caddy_config:/config
     depends_on:
-      - music-search
+      music-search:
+        condition: service_started
     restart: always
 
 # Caddy 证书数据卷（不要删除，否则证书丢失需重新申请）

@@ -21,3 +21,6 @@ music_hash.db
 
 # Docker 离线依赖包（仅部署时使用，不入库）
 wheels/
+
+# Environment secrets (use .env.example as template)
+.env

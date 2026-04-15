@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  docker-build:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docker-compose config
+        run: docker compose config --quiet
+
+      - name: Ensure .env.example is in sync with docker-compose
+        run: |
+          # Every variable referenced as ${VAR} in docker-compose.yml
+          # must have a matching entry in .env.example
+          compose_vars=$(grep -oP '\$\{(\w+)\}' docker-compose.yml | tr -d '${}'  | sort -u)
+          for var in $compose_vars; do
+            if ! grep -q "^${var}=" .env.example; then
+              echo "ERROR: \${$var} is used in docker-compose.yml but missing from .env.example"
+              exit 1
+            fi
+          done
+          echo "All docker-compose variables are documented in .env.example"
+
+      - name: Copy .env.example to .env for build
+        run: cp .env.example .env
+
+      - name: Build Docker image
+        run: docker build -t music-search-system:ci-test .
+
+  lint:
+    name: Python Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Run ruff check
+        run: ruff check --select=E,F,I --ignore=E501 .
