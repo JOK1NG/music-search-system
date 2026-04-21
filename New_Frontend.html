@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Codex 终极视觉复刻</title>
+    <style>
+        /* CSS：创建底层背景结界 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050505;
+            /* 深色背景 */
+            overflow: hidden;
+            font-family: monospace;
+        }
+
+        #codex-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            /* 置于底层 */
+            pointer-events: none;
+            /* 鼠标穿透，不影响点击页面内容 */
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            pointer-events: none;
+            /* 仅演示用，实际页面请移除此行 */
+        }
+
+        h1 {
+            font-size: 3rem;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        p {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="codex-canvas"></canvas>
+
+    <div class="content">
+        <h1>CODEX VISUALS</h1>
+        <p>滑动鼠标见证字符流的“能量褪变”</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('codex-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // 配置参数
+        const config = {
+            gridSize: 10,      // 网格密度（越小越密集）
+            brushRadius: 50,   // 笔刷影响范围
+            decayRate: 1,    // 能量衰减速度
+            maxEnergy: 100     // 初始最高能量
+        };
+
+        // 点击涟漪配置
+        const rippleConfig = {
+            speed: 3.5,        // 涟漪扩散速度（px/frame）
+            maxRadius: 280,    // 最大扩散半径
+            ringWidth: 22      // 环带宽度（相当于笔刷厚度）
+        };
+        const ripples = [];
+
+        let width, height, rows, cols;
+        let grid = [];
+        let mouse = { x: -1000, y: -1000, lastX: -1000, lastY: -1000, initialized: false };
+        let lastMoveTime = 0;
+        const IDLE_THRESHOLD = 40; // ms：超过该时间视为“静止”
+
+        // 初始化网格
+        function initGrid() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            cols = Math.ceil(width / config.gridSize);
+            rows = Math.ceil(height / config.gridSize);
+            grid = [];
+
+            for (let i = 0; i < cols; i++) {
+                for (let j = 0; j < rows; j++) {
+                    grid.push({
+                        x: i * config.gridSize + config.gridSize / 2,
+                        y: j * config.gridSize + config.gridSize / 2,
+                        energy: 0
+                    });
+                }
+            }
+        }
+
+        // 计算点到线段的最短距离（核心逻辑：解决甩鼠标太快断触）
+        function distToSegment(px, py, x1, y1, x2, y2) {
+            const l2 = Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2);
+            if (l2 === 0) return Math.sqrt(Math.pow(px - x1, 2) + Math.pow(py - y1, 2));
+            let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.sqrt(Math.pow(px - (x1 + t * (x2 - x1)), 2) + Math.pow(py - (y1 + t * (y2 - y1)), 2));
+        }
+
+        // 鼠标移动监听
+        window.addEventListener('mousemove', (e) => {
+            mouse.lastX = mouse.x;
+            mouse.lastY = mouse.y;
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+
+            // 给线段范围内的网格注入能量
+            grid.forEach(p => {
+                const dist = distToSegment(p.x, p.y, mouse.lastX, mouse.lastY, mouse.x, mouse.y);
+                if (dist < config.brushRadius) {
+                    // 距离中心越近，能量越高
+                    const power = (1 - dist / config.brushRadius) * config.maxEnergy;
+                    if (power > p.energy) p.energy = power;
+                }
+            });
+        });
+
+        // 点击触发涟漪
+        window.addEventListener('click', (e) => {
+            ripples.push({ x: e.clientX, y: e.clientY, radius: 0 });
+        });
+
+        window.addEventListener('resize', initGrid);
+
+        // 渲染循环
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = `${config.gridSize * 0.8}px monospace`;
+
+            // 更新涟漪：向环带内的网格注入能量
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                const r = ripples[i];
+                r.radius += rippleConfig.speed;
+                const lifeRatio = 1 - r.radius / rippleConfig.maxRadius; // 1 → 0
+                if (lifeRatio <= 0) {
+                    ripples.splice(i, 1);
+                    continue;
+                }
+                // 仅扫描涟漪当前可能覆盖的网格范围，避免全网格遍历
+                const rMin = r.radius - rippleConfig.ringWidth;
+                const rMax = r.radius + rippleConfig.ringWidth;
+                const rMinSq = rMin > 0 ? rMin * rMin : 0;
+                const rMaxSq = rMax * rMax;
+                grid.forEach(p => {
+                    const dx = p.x - r.x;
+                    const dy = p.y - r.y;
+                    const dSq = dx * dx + dy * dy;
+                    if (dSq < rMinSq || dSq > rMaxSq) return;
+                    const d = Math.sqrt(dSq);
+                    const delta = Math.abs(d - r.radius);
+                    const power = (1 - delta / rippleConfig.ringWidth) * config.maxEnergy * lifeRatio;
+                    if (power > p.energy) p.energy = power;
+                });
+            }
+
+            grid.forEach(p => {
+                if (p.energy > 0) {
+                    // 1. 能量衰减
+                    p.energy -= config.decayRate;
+                    if (p.energy < 0) p.energy = 0;
+
+                    // 2. 能量降级判定字符
+                    let char = '';
+                    let color = '';
+
+                    if (p.energy > 70) {
+                        char = 'o';
+                        color = `rgba(255, 255, 255, ${p.energy / 100})`;
+                    } else if (p.energy > 30) {
+                        char = '>';
+                        color = `rgba(200, 200, 200, ${p.energy / 100})`;
+                    } else {
+                        char = '-';
+                        color = `rgba(100, 100, 100, ${p.energy / 100})`;
+                    }
+
+                    // 3. 绘制
+                    ctx.fillStyle = color;
+                    ctx.fillText(char, p.x, p.y);
+                }
+            });
+
+            requestAnimationFrame(render);
+        }
+
+        initGrid();
+        render();
+    </script>
+</body>
+
+</html>
