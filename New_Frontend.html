@@ -66,19 +66,26 @@
         const canvas = document.getElementById('codex-canvas');
         const ctx = canvas.getContext('2d');
 
-        // 配置参数
+        // 全局配置（只负责网格密度，阈值按归一化亮度判断）
         const config = {
-            gridSize: 10,      // 网格密度（越小越密集）
-            brushRadius: 50,   // 笔刷影响范围
-            decayRate: 1,    // 能量衰减速度
-            maxEnergy: 100     // 初始最高能量
+            gridSize: 10       // 网格密度（越小越密集）
         };
 
-        // 点击涟漪配置
+        // 鼠标尾迹配置（独立可调）
+        const trailConfig = {
+            brushRadius: 54,   // 笔刷影响范围
+            decayRate: 0.2,    // 尾迹衰减速度
+            maxEnergy: 100     // 尾迹能量上限
+        };
+
+        // 点击涟漪配置（独立可调）
         const rippleConfig = {
-            speed: 1.25,        // 涟漪扩散速度（px/frame）
-            maxRadius: 250,    // 最大扩散半径
-            ringWidth: 22      // 环带宽度（相当于笔刷厚度）
+            speed: 1.5,          // 涟漪扩散速度（px/frame）
+            maxRadius: 200,    // 最大扩散半径
+            ringWidth: 10,     // 环带宽度（相当于笔刷厚度）
+            decayRate: 1,    // 涟漪拖尾衰减速度
+            maxEnergy: 70,    // 涟漪能量上限
+            innerFill: 0.3     // 圆盘内部填充强度（0=空心环，1=内部与环峰同亮）
         };
         const ripples = [];
 
@@ -104,7 +111,8 @@
                     grid.push({
                         x: i * config.gridSize + config.gridSize / 2,
                         y: j * config.gridSize + config.gridSize / 2,
-                        energy: 0
+                        trailEnergy: 0,
+                        rippleEnergy: 0
                     });
                 }
             }
@@ -126,20 +134,20 @@
             mouse.x = e.clientX;
             mouse.y = e.clientY;
 
-            // 给线段范围内的网格注入能量
+            // 给线段范围内的网格注入尾迹能量
             grid.forEach(p => {
                 const dist = distToSegment(p.x, p.y, mouse.lastX, mouse.lastY, mouse.x, mouse.y);
-                if (dist < config.brushRadius) {
+                if (dist < trailConfig.brushRadius) {
                     // 距离中心越近，能量越高
-                    const power = (1 - dist / config.brushRadius) * config.maxEnergy;
-                    if (power > p.energy) p.energy = power;
+                    const power = (1 - dist / trailConfig.brushRadius) * trailConfig.maxEnergy;
+                    if (power > p.trailEnergy) p.trailEnergy = power;
                 }
             });
         });
 
-        // 点击触发涟漪
+        // 点击触发涟漪（dir: 1 向外扩散，-1 向内消散）
         window.addEventListener('click', (e) => {
-            ripples.push({ x: e.clientX, y: e.clientY, radius: 0 });
+            ripples.push({ x: e.clientX, y: e.clientY, radius: 0, dir: 1 });
         });
 
         window.addEventListener('resize', initGrid);
@@ -151,57 +159,90 @@
             ctx.textBaseline = 'middle';
             ctx.font = `${config.gridSize * 0.8}px monospace`;
 
-            // 更新涟漪：向环带内的网格注入能量
+            // 更新涟漪：先向外扩散，到最大半径后反向向内消散
             for (let i = ripples.length - 1; i >= 0; i--) {
                 const r = ripples[i];
-                r.radius += rippleConfig.speed;
-                const lifeRatio = 1 - r.radius / rippleConfig.maxRadius; // 1 → 0
-                if (lifeRatio <= 0) {
+                r.radius += rippleConfig.speed * r.dir;
+
+                // 到达最大半径：反向收缩
+                if (r.dir === 1 && r.radius >= rippleConfig.maxRadius) {
+                    r.radius = rippleConfig.maxRadius;
+                    r.dir = -1;
+                }
+                // 收缩回原点：销毁
+                if (r.dir === -1 && r.radius <= 0) {
                     ripples.splice(i, 1);
                     continue;
                 }
-                // 仅扫描涟漪当前可能覆盖的网格范围，避免全网格遍历
+
+                // 强度：方案A 完全镜像，扩散与收缩都保持满强度
+                // 环本身始终一样亮，淡出交给网格能量自然衰减（config.decayRate）
+                const lifeRatio = 1;
+
+                // 扫描范围：外缘到 radius+ringWidth；内侧若需填充则到 0，否则从 radius-ringWidth 起
+                const useFill = rippleConfig.innerFill > 0;
                 const rMin = r.radius - rippleConfig.ringWidth;
                 const rMax = r.radius + rippleConfig.ringWidth;
-                const rMinSq = rMin > 0 ? rMin * rMin : 0;
+                const rMinSq = useFill ? 0 : (rMin > 0 ? rMin * rMin : 0);
                 const rMaxSq = rMax * rMax;
+                // (no-op：fillPower 未使用，已移除)
                 grid.forEach(p => {
                     const dx = p.x - r.x;
                     const dy = p.y - r.y;
                     const dSq = dx * dx + dy * dy;
                     if (dSq < rMinSq || dSq > rMaxSq) return;
                     const d = Math.sqrt(dSq);
-                    const delta = Math.abs(d - r.radius);
-                    const power = (1 - delta / rippleConfig.ringWidth) * config.maxEnergy * lifeRatio;
-                    if (power > p.energy) p.energy = power;
+
+                    let power;
+                    if (d >= r.radius) {
+                        // 环的外缘：从峰值向外线性衰减到 0（原行为）
+                        const delta = d - r.radius;
+                        if (delta >= rippleConfig.ringWidth) return;
+                        power = (1 - delta / rippleConfig.ringWidth) * rippleConfig.maxEnergy * lifeRatio;
+                    } else {
+                        // 环内区域：在 [innerFill, 1] 之间线性过渡，保证中心不塌陷
+                        const t = 1 - (r.radius - d) / r.radius; // d=0→innerFill, d=radius→峰值
+                        power = (rippleConfig.innerFill + (1 - rippleConfig.innerFill) * t)
+                            * rippleConfig.maxEnergy * lifeRatio;
+                    }
+                    if (power > p.rippleEnergy) p.rippleEnergy = power;
                 });
             }
 
             grid.forEach(p => {
-                if (p.energy > 0) {
-                    // 1. 能量衰减
-                    p.energy -= config.decayRate;
-                    if (p.energy < 0) p.energy = 0;
-
-                    // 2. 能量降级判定字符
-                    let char = '';
-                    let color = '';
-
-                    if (p.energy > 70) {
-                        char = 'o';
-                        color = `rgba(255, 255, 255, ${p.energy / 100})`;
-                    } else if (p.energy > 30) {
-                        char = '>';
-                        color = `rgba(200, 200, 200, ${p.energy / 100})`;
-                    } else {
-                        char = '-';
-                        color = `rgba(100, 100, 100, ${p.energy / 100})`;
-                    }
-
-                    // 3. 绘制
-                    ctx.fillStyle = color;
-                    ctx.fillText(char, p.x, p.y);
+                // 1. 两条能量通道各自独立衰减
+                if (p.trailEnergy > 0) {
+                    p.trailEnergy -= trailConfig.decayRate;
+                    if (p.trailEnergy < 0) p.trailEnergy = 0;
                 }
+                if (p.rippleEnergy > 0) {
+                    p.rippleEnergy -= rippleConfig.decayRate;
+                    if (p.rippleEnergy < 0) p.rippleEnergy = 0;
+                }
+
+                // 2. 归一化到 [0,1] 后取较亮者，解耦两种源的强度标度
+                const trailB = p.trailEnergy / trailConfig.maxEnergy;
+                const rippleB = p.rippleEnergy / rippleConfig.maxEnergy;
+                const brightness = trailB > rippleB ? trailB : rippleB;
+                if (brightness <= 0) return;
+
+                // 3. 亮度降级判定字符
+                let char = '';
+                let color = '';
+                if (brightness > 0.7) {
+                    char = 'o';
+                    color = `rgba(255, 255, 255, ${brightness})`;
+                } else if (brightness > 0.3) {
+                    char = '>';
+                    color = `rgba(200, 200, 200, ${brightness})`;
+                } else {
+                    char = '-';
+                    color = `rgba(100, 100, 100, ${brightness})`;
+                }
+
+                // 4. 绘制
+                ctx.fillStyle = color;
+                ctx.fillText(char, p.x, p.y);
             });
 
             requestAnimationFrame(render);
