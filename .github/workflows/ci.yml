@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg libsndfile1
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx flake8
+
+      - name: Syntax check
+        run: |
+          python -m compileall main.py search.py model.py config.py preprocessing.py \
+            batch_extract.py dataset.py train.py init_db.py make_noise.py
+
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics \
+            --exclude=.venv,__pycache__,wheels,data,checkpoints
+          flake8 . --count --exit-zero --max-complexity=15 --max-line-length=120 --statistics \
+            --exclude=.venv,__pycache__,wheels,data,checkpoints
+
+      - name: Test with pytest
+        run: |
+          python -m pytest tests/ -v --tb=short
+        env:
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'ci-test-secret-key-32chars-minimum-xxx' }}

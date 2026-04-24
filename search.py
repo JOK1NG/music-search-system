@@ -8,7 +8,7 @@ import faiss
 from model import AudioHashNet
 from config import DB_PATH, INDEX_PATH, MODEL_PATH, TOP_K, TOP_N_RESULTS, SAMPLE_RATE
 from preprocessing import (
-    load_audio, pad_audio,
+    load_audio, pad_audio, trim_silence,
     build_mel_spectrogram, spec_to_tensor, binarize_hash,
     slice_best_windows, extract_hash_from_full_spectrum,
 )
@@ -60,6 +60,9 @@ def search_music(test_audio_path, index, model, top_k=TOP_K):
 
     # --- 第一步: 加载完整音频 ---
     y, sr = load_audio(test_audio_path, duration=15.0)
+
+    # VAD: 切除前后静音区，让能量窗口更聚焦有效音频
+    y = trim_silence(y, top_db=30, sr=sr)
 
     total_duration = len(y) / sr
     if total_duration < 5.0:

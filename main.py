@@ -199,6 +199,28 @@ async def rate_limit_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+# --- CSP 安全头中间件 ---
+CSP_POLICY = os.environ.get("CSP_POLICY", "; ".join([
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "connect-src 'self'",
+    "media-src 'self'",
+    "img-src 'self' data: blob:",
+    "worker-src blob:",
+]))
+
+
+@app.middleware("http")
+async def csp_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = CSP_POLICY
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
+
+
 # --- 健康检查 ---
 @app.get("/health", include_in_schema=False)
 async def health_check():

@@ -20,6 +20,16 @@ def pad_audio(y, target_duration):
     return y[:target_len]
 
 
+def trim_silence(y, top_db=30, sr=None):
+    """VAD 静音检测：切除前后静音区，避免浪费能量窗口位"""
+    if sr is None:
+        sr = SAMPLE_RATE
+    y_trimmed, _ = librosa.effects.trim(y, top_db=top_db)
+    if len(y_trimmed) < int(sr * 0.5):
+        return y
+    return y_trimmed
+
+
 def build_mel_spectrogram(y, sr=None):
     """提取梅尔频谱并转换为 dB —— 统一接口"""
     if sr is None:

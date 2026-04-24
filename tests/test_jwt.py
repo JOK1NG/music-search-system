@@ -1,11 +1,17 @@
-import pytest
 import jwt
-from config import JWT_SECRET, JWT_ALGORITHM
+import pytest
+from datetime import datetime, timedelta, timezone
+from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_DAYS
+
+
+def _create_token(user_id, username):
+    expire = datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRE_DAYS)
+    payload = {"sub": str(user_id), "username": username, "exp": expire}
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def test_jwt_create_and_verify():
-    from main import create_access_token, get_current_user
-    token = create_access_token(user_id=1, username="testuser")
+    token = _create_token(user_id=1, username="testuser")
     assert token is not None
     decoded = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     assert decoded["sub"] == "1"
@@ -13,8 +19,6 @@ def test_jwt_create_and_verify():
 
 
 def test_jwt_expired():
-    import time
-    from datetime import datetime, timedelta, timezone
     payload = {
         "sub": "1",
         "username": "test",

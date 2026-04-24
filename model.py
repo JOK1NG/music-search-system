@@ -3,10 +3,9 @@ import torch.nn as nn
 
 
 class AudioHashNet(nn.Module):
-    def __init__(self, hash_length=128):
+    def __init__(self, hash_length=128, dropout_rate=0.3):
         super(AudioHashNet, self).__init__()
 
-        # 🧠 大脑皮层升级：更宽（通道达到256）、更深（4层卷积）
         self.features = nn.Sequential(
             nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
@@ -29,9 +28,8 @@ class AudioHashNet(nn.Module):
             nn.AdaptiveAvgPool2d((4, 4))
         )
 
-        # 👑 终极输出层
         self.fc = nn.Sequential(
-            nn.Dropout(p=0.5),  # 猛药：随机让一半神经元失忆，防止它死记硬背！
+            nn.Dropout(p=dropout_rate),
             nn.Linear(256 * 4 * 4, hash_length),
             nn.Tanh()
         )

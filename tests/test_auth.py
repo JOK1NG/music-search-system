@@ -46,10 +46,10 @@ def test_history_requires_auth(client: TestClient):
 
 
 def test_rate_limit(client: TestClient):
-    for _ in range(15):
+    for _ in range(110):
         client.post("/login", json={"username": "nobody", "password": "x"})
     resp = client.post("/login", json={"username": "nobody", "password": "x"})
-    assert resp.status_code in (400, 429)
+    assert resp.status_code == 429
 
 
 def test_search_no_file(client: TestClient):
