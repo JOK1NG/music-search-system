@@ -1,22 +1,49 @@
+import logging
+import os
+import sys
+import random
+
 import librosa
 import numpy as np
 import soundfile as sf
-import os
 
-# 1. 读取原版完美音频
-original_path = "./data/raw/000/000002.mp3"  # 确保这个路径是对的
-y, sr = librosa.load(original_path, sr=22050)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("make_noise")
 
-# 2. 制造软件级别的白噪声（模拟电流麦、背景底噪）
-noise = np.random.randn(len(y))
-# 控制噪声大小，0.05 已经是很明显的沙沙声了
-y_noisy = y + 0.05 * noise
 
-# 3. 保存为带噪音的测试文件
-output_path = "000002_noisy_test.wav"
-sf.write(output_path, y_noisy, sr)
+def generate_noisy_sample(source_path=None, noise_level=0.05):
+    if source_path is None:
+        raw_dir = "./data/raw"
+        music_files = []
+        for root, dirs, files in os.walk(raw_dir):
+            for f in files:
+                if f.lower().endswith(('.mp3', '.wav')):
+                    music_files.append(os.path.join(root, f))
+        if not music_files:
+            logger.error("未找到任何音频文件，请先放置数据到 %s", raw_dir)
+            return
+        source_path = random.choice(music_files)
+        logger.info("随机选取源文件: %s", source_path)
 
-print(f"✅ 成功生成带噪音的测试文件: {os.path.abspath(output_path)}")
-print("快去网页上把这个文件传上去测一下！")
+    if not os.path.exists(source_path):
+        logger.error("源文件不存在: %s", source_path)
+        return
 
-#todo 可否实现随机选取文件进行加噪音展示 ？
+    y, sr = librosa.load(source_path, sr=22050)
+    noise = np.random.randn(len(y))
+    y_noisy = y + noise_level * noise
+
+    base = os.path.splitext(os.path.basename(source_path))[0]
+    output_path = f"{base}_noisy_test.wav"
+    sf.write(output_path, y_noisy, sr)
+    logger.info("成功生成带噪音测试文件: %s", os.path.abspath(output_path))
+
+
+if __name__ == "__main__":
+    source = sys.argv[1] if len(sys.argv) > 1 else None
+    noise_lvl = float(sys.argv[2]) if len(sys.argv) > 2 else 0.05
+    generate_noisy_sample(source, noise_lvl)

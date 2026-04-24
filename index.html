@@ -1233,6 +1233,7 @@
                 // 🌟 API 地址自动推断（本地/服务器零配置切换）
                 // ==========================================
                 const API_BASE = window.location.origin;
+                axios.defaults.withCredentials = true;
 
                 const selectedFile = ref(null);
                 const isSearching = ref(false);
@@ -1276,17 +1277,15 @@
                 const favList = ref([]);
                 const favSet = ref(new Set());
 
-                // 🔐 生成带鉴权头的 axios 配置
-                const authHeaders = () => ({
-                    headers: { 'Authorization': `Bearer ${authToken.value}` }
-                });
+                // 🔐 JWT 由 httpOnly Cookie 自动携带，无需手动设置 Authorization 头
+                const authHeaders = () => ({});
 
                 // 🕐 搜索历史状态
                 const showHistoryModal = ref(false);
                 const historyList = ref([]);
 
                 const openHistory = async () => {
-                    if (!authToken.value) return;
+                    if (!currentUser.value) return;
                     try {
                         const res = await axios.get(`${API_BASE}/history`, authHeaders());
                         if (res.data.code === 200) historyList.value = res.data.data;
@@ -1302,12 +1301,10 @@
                 };
 
                 onMounted(() => {
-                    // 恢复登录态（用户信息 + JWT 令牌）
                     const savedUser = localStorage.getItem('music_app_user');
-                    const savedToken = localStorage.getItem('music_app_token');
-                    if (savedUser && savedToken) {
+                    if (savedUser) {
                         currentUser.value = JSON.parse(savedUser);
-                        authToken.value = savedToken;
+                        authToken.value = "cookie";
                         fetchFavorites();
                     }
 
@@ -1326,8 +1323,12 @@
                     wavesurfer.on('click', () => { wavesurfer.playPause(); });
                 });
 
+                onUnmounted(() => {
+                    if (wavesurfer) { wavesurfer.destroy(); wavesurfer = null; }
+                });
+
                 const fetchFavorites = async () => {
-                    if (!currentUser.value || !authToken.value) return;
+                    if (!currentUser.value) return;
                     try {
                         const res = await axios.get(
                             `${API_BASE}/favorites/${currentUser.value.user_id}`,
@@ -1341,7 +1342,7 @@
                 };
 
                 const toggleFav = async (song) => {
-                    if (!currentUser.value || !authToken.value) {
+                    if (!currentUser.value) {
                         customAlert("记录操作失败，宿主当前未被允许接入持久层存储节点，请先验证登入身份。", "云端权限");
                         openAuth('login');
                         return;
@@ -1359,11 +1360,11 @@
 
                 const openAuth = (mode) => { authMode.value = mode; authForm.value = { username: '', password: '' }; showAuthModal.value = true; };
 
-                const logout = () => {
+                const logout = async () => {
+                    try { await axios.post(`${API_BASE}/logout`); } catch (e) { }
                     currentUser.value = null;
                     authToken.value = null;
                     localStorage.removeItem('music_app_user');
-                    localStorage.removeItem('music_app_token');
                     favList.value = [];
                     favSet.value.clear();
                 };
@@ -1379,10 +1380,9 @@
                                     user_id: response.data.data.user_id,
                                     username: response.data.data.username
                                 };
-                                // 🔐 保存 JWT 令牌
-                                authToken.value = response.data.data.access_token;
+                                // 🔐 JWT 由 httpOnly Cookie 管理，前端仅存用户信息
+                                authToken.value = "cookie";
                                 localStorage.setItem('music_app_user', JSON.stringify(currentUser.value));
-                                localStorage.setItem('music_app_token', authToken.value);
                                 showAuthModal.value = false;
                                 fetchFavorites();
                             } else {
@@ -1473,10 +1473,9 @@
                     const formData = new FormData();
                     formData.append('file', selectedFile.value);
                     try {
-                        // 🔐 已登录时附带 token，后端会自动记录历史
-                        const headers = { 'Content-Type': 'multipart/form-data' };
-                        if (authToken.value) headers['Authorization'] = `Bearer ${authToken.value}`;
-                        const response = await axios.post(`${API_BASE}/search`, formData, { headers });
+                        const response = await axios.post(`${API_BASE}/search`, formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
+                        });
                         if (response.data.code === 200) results.value = response.data.data;
                         else customAlert("引擎核心坍缩: " + response.data.message, "降维阻断");
                     } catch (e) { customAlert("宿主机守护进程无响应，Faiss 库未唤醒。", "失联"); }

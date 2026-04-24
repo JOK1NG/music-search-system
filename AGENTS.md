@@ -26,21 +26,25 @@ python main.py
 
 ### 2. 数据库与离线建库 (必要时运行)
 
-初始化 SQLite 数据库 (`music_hash.db`)，包含用户表与收藏表：
+当前主库 `music_hash.db` 的用户表、收藏表和搜索历史表由 `main.py` 启动时自动创建，不需要先手动运行初始化脚本。
+
+`init_db.py` 是旧版/辅助元数据脚本：它从 `data/processed/file_mapping.npy` 生成 `data/music_meta.db`，不负责当前 FastAPI 主库的 `users`、`favorites` 或 `search_history` 表。只有在维护旧版 `data/processed/` 流程时才运行：
 
 ```bash
 python init_db.py
 ```
 
-提取 `data/raw/` 下所有音频，执行特征压缩并生成离线索引 (`music_hash.index` 和 SQLite 映射)：
+提取 `data/raw/` 下所有音频，执行特征压缩并生成离线索引 (`music_hash.index`) 和当前主库 `music_hash.db` 里的 `songs` 映射表：
 
 ```bash
 python batch_extract.py
 ```
 
+注意：`batch_extract.py` 会重建 `songs` 表并刷新 Faiss 索引，只在需要重建曲库时运行。
+
 ### 3. 模型训练与造数据 (算法迭代运行)
 
-训练 CNN 深度哈希模型（生成模型权重至 `checkpoints/`），默认已调优超参数 `lr=1e-5`, `margin=15.0`：
+训练 CNN 深度哈希模型（生成模型权重至 `checkpoints/`）。当前代码默认超参数为 `lr=1e-5`, `margin=5.0`, `num_epochs=3`，推理和建库默认加载 `checkpoints/hash_model_epoch_3.pth`：
 
 ```bash
 python train.py
@@ -56,12 +60,12 @@ python make_noise.py
 
 目录遵循扁平化微服务结构，核心责任划分明确：
 
-- `./main.py`: **系统入口**。 API 路由控制中心（/search, /login, /register），配置跨域及挂载 data/raw 静态目录，负责 JWT/Session 鉴权。
-- `./search.py`: **核心业务大脑**。在线检索核心大脑。处理前端上传音频（Librosa去静音/归一化），执行模型推理，调用 Faiss 返回多候选，合并比对结果。
+- `./main.py`: **系统入口**。 API 路由控制中心（/search, /login, /register），配置跨域及挂载 data/raw 静态目录，负责 JWT 鉴权，并在启动时自动创建用户、收藏和搜索历史表。
+- `./search.py`: **核心业务大脑**。在线检索核心大脑。处理前端上传音频（Librosa 读取前 15 秒、短音频补齐、按 RMS 选择能量最高的 3 个 5 秒窗口），执行模型推理，调用 Faiss 返回多候选，合并比对结果。
 - `./model.py`: **AI 神经网络定义**。定义深层 AudioHashNet 架构，负责音频频域到 128 位哈希映射的神经网络主体。
 - `./dataset.py`: **数据工厂**。构造 Triplet 数据流，执行在线数据增强（添加白噪）。
 - `./train.py`: **炼丹炉**。训练守护进程。基于 Triplet Loss 控制模型收敛。
-- `./batch_extract.py`: 离线建库脚本。基于“滑动窗口策略”处理全量库，刷新 Faiss 二进制索引和 SQLite 的 songs 表。
+- `./batch_extract.py`: 离线建库脚本。基于“滑动窗口策略”处理 `data/raw/` 曲库前 30 秒音频，刷新 Faiss 二进制索引和 `music_hash.db` 的 `songs` 表。
 - `./index.html`: **单文件前端**。Vue3 组合式 API + WaveSurfer.js 前端应用，单文件全栈结构。
 - `./data/`: **存储中心**。存放原始音频 `raw/` 目录以及数据库文件。
 - `./checkpoints/`: **模型权重库**。存放 `.pth` 模型权重供推理使用。
@@ -77,7 +81,7 @@ What NOT to Do (Safety Rails)
 3.绝对禁止前端“过度工程化”：
    不要 创建 Vue CLI、Vite 或 package.json。本项目严格维持单文件开发，通过 `<script src="https://unpkg.com/...">` 的无包管理 CDN 模式引入一切环境。
 4.禁止随意破坏或重置数据库结构：
-   业务关系已依赖 users 和 favorites 表的主键和 UNIQUE 逻辑。不要 随手运行 init_db.py 内的 DROP 逻辑，会清空整个产品的本地用户数据。
+   业务关系已依赖 `users`、`favorites`、`search_history` 和 `songs` 表的主键与 UNIQUE 逻辑。不要随手修改建表 SQL，或在有重要本地数据时运行会重建表/清表的脚本。尤其注意：`batch_extract.py` 会 DROP 并重建 `songs` 表；`init_db.py` 是旧版辅助脚本，会清空 `data/music_meta.db` 里的辅助 `songs` 表，但不维护当前主库用户数据。
 
 ## Before changing code, read these files first
 
