@@ -22,6 +22,7 @@
 示例（Linux / macOS）：
 
 ```bash
+export JWT_SECRET=local-dev-secret-key-32chars-minimum-xxx
 export TRAIN_DROPOUT=0.3
 export TRAIN_PATIENCE=6
 export TRAIN_MIN_DELTA=0.0005
@@ -29,7 +30,7 @@ python train.py
 ```
 
 ```bash
-tensorboard --logdir "$TRAIN_LOG_DIR"
+tensorboard --logdir ./runs
 ```
 
 说明：`TRAIN_RESUME_CHECKPOINT` 默认会从 `TRAIN_CHECKPOINT_DIR` 下读取并恢复模型与优化器状态（若不存在则从头训练）。
