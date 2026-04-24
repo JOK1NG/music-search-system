@@ -202,7 +202,7 @@ async def rate_limit_middleware(request: Request, call_next):
 # --- CSP 安全头中间件 ---
 CSP_POLICY = os.environ.get("CSP_POLICY", "; ".join([
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://unpkg.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "connect-src 'self'",
