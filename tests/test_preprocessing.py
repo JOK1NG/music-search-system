@@ -4,6 +4,7 @@ from preprocessing import (
     pad_audio,
     build_mel_spectrogram,
     binarize_hash,
+    trim_silence,
     slice_best_windows,
 )
 
@@ -31,6 +32,13 @@ def test_binarize_hash():
     packed = binarize_hash(hash_out)
     assert packed.shape == (1, 16)
     assert packed.dtype == np.uint8
+
+
+def test_trim_silence_all_silent_segment_returns_original():
+    sr = 22050
+    y = np.zeros(int(sr * 4), dtype=np.float32)
+    trimmed = trim_silence(y, top_db=30, sr=sr)
+    assert np.array_equal(trimmed, y)
 
 
 def test_slice_best_windows():
