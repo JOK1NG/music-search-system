@@ -40,7 +40,7 @@ python batch_extract.py
 
 ### 3. 模型训练与造数据 (算法迭代运行)
 
-训练 CNN 深度哈希模型（生成模型权重至 `checkpoints/`），默认已调优超参数 `lr=1e-5`, `margin=15.0`：
+训练 CNN 深度哈希模型（生成模型权重至 `checkpoints/`），默认已调优超参数 `lr=1e-5`, `margin=5.0`：
 
 ```bash
 python train.py
