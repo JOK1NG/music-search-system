@@ -9,8 +9,10 @@ y, sr = librosa.load(original_path, sr=22050)
 
 # 2. 制造软件级别的白噪声（模拟电流麦、背景底噪）
 noise = np.random.randn(len(y))
-# 控制噪声大小，0.05 已经是很明显的沙沙声了
-y_noisy = y + 0.05 * noise
+# ⚠️ 必须与 dataset.py 的训练增强分布对齐（训练用 0.01）：
+# - 0.01 ≈ 24 dB SNR，完美命中；0.02 ≈ 18 dB SNR，hamming≈6，rank1 稳得住；
+# - 0.03+ 超出训练分布，模型哈希开始失守，真命中会掉出 top5。
+y_noisy = y + 0.02 * noise
 
 # 3. 保存为带噪音的测试文件
 output_path = "000002_noisy_test.wav"
