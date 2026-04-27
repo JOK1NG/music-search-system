@@ -1706,9 +1706,8 @@
 
         const canvas = document.getElementById('shader-bg');
         if (canvas) {
-            try {
-                await createShader(canvas, {
-                    components: [
+            const shaderConfig = {
+                components: [
                         {
                             type: 'LinearGradient',
                             id: 'idmlka7erd1a3ktj1bs',
@@ -1773,10 +1772,32 @@
                             },
                         },
                     ],
-                });
-            } catch (err) {
-                console.warn('[Solar Silk 1] WebGPU 着色器初始化失败，已回退至基础纸白底色：', err);
-            }
+            };
+
+            let shader = null;
+
+            const startShader = async () => {
+                if (shader) return;
+                try {
+                    shader = await createShader(canvas, shaderConfig);
+                } catch (err) {
+                    console.warn('[Solar Silk 1] WebGPU 着色器初始化失败，已回退至基础纸白底色：', err);
+                }
+            };
+
+            const stopShader = () => {
+                if (!shader) return;
+                try { shader.destroy(); } catch (_) { /* noop */ }
+                shader = null;
+            };
+
+            // 💤 标签页切走时彻底释放 GPU 资源，切回时重建 —— 省电 / 不发热
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) stopShader();
+                else startShader();
+            });
+
+            await startShader();
         }
     </script>
 
