@@ -17,6 +17,8 @@ services:
     environment:
       # 必须来自 .env 或宿主机环境变量，禁止在仓库里写死真实密钥
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env or shell}
+      # 生产环境通过 Caddy HTTPS 访问，JWT Cookie 必须带 Secure 标记
+      - COOKIE_SECURE=${COOKIE_SECURE:-1}
       # 如果后续启用 GPU 推理，这行可解除限制
       # - OMP_NUM_THREADS=4
     restart: always # 出现宕机或重启服务器时，Docker 自动将其拉起

@@ -22,18 +22,21 @@
 启动 FastAPI 后端（同时担任对外的 API 服务器与 `index.html` 静态分发入口）：
 
 ```bash
+export JWT_SECRET="$(openssl rand -hex 32)"
 python main.py
 ```
+
+`JWT_SECRET` 是必填项；未设置时 `main.py` 会拒绝启动，避免本地和生产误用弱密钥。若只是本地反复调试，可固定一个本机专用随机值，避免每次重启后旧登录态失效。
 
 前端页面入口：直接在浏览器中打开 `http://127.0.0.1:8000/` 即可；文件级打开 `index.html` 也能用，但推荐经 FastAPI 访问以便 `window.location.origin` 正确推断 API 地址。
 
 ### 2. 数据库与离线建库 (必要时运行)
 
-初始化 SQLite 数据库 (`music_hash.db`)，生成 `users`、`favorites`、`search_history`、`songs` 四张业务表：
+当前主库是 `music_hash.db`：
 
-```bash
-python init_db.py
-```
+- `main.py` 启动时会非破坏式创建 `users`、`favorites`、`search_history` 三张用户业务表。
+- `batch_extract.py` 负责刷新 `songs` 表与 `music_hash.index`，并采用临时表 / 临时索引提交，失败时保留旧库。
+- `init_db.py` 是早期 `data/music_meta.db` 元数据脚本，依赖 `data/processed/file_mapping.npy`，且会清空它目标库里的 `songs` 记录；不要把它当作当前主库初始化命令运行。
 
 扫描 `data/raw/` 下全量音频，执行滑动窗口切片 + 特征压缩，生成离线索引 (`music_hash.index`) 与 `songs` 元数据映射：
 
@@ -89,13 +92,14 @@ Caddy 监听 80/443，反代到 `music-search:8000`。宿主机必须预先放�
 - `./dataset.py`：**数据工厂**。构造 Triplet `(anchor, positive, negative)` 数据流，执行在线白噪声数据增强。
 - `./train.py`：**炼丹炉**。基于 Triplet Margin Loss 控制模型收敛。
 - `./batch_extract.py`：**离线建库脚本**。滑动窗口扫全量音频库，刷新 Faiss 二进制索引 + `songs` 表。
+- `./init_db.py`：**旧版元数据脚本**。只面向早期 `data/music_meta.db` + `file_mapping.npy` 流程，不是当前 `music_hash.db` 主库初始化入口。
 - `./precompute_cache.py`：**训练加速缓存**。提前解码 MP3/WAV 为 `.npy`，跳过训练时最昂贵的音频解码步骤。
 - `./make_noise.py`：**噪声增强脚本**。合成带白噪音版本的测试音频。
 - `./index.html`：**单文件前端**。Vue 3 组合式 API + `WaveSurfer.js` + `Paper Shaders` (WebGPU) 背景的单文件 SPA。
 - `./favicon.svg`、`./vectortun.svg`：VECTORTUNE 品牌 Logo 与 favicon。
-- `./data/`：**存储中心**。原始音频 `raw/`、波形缓存 `waveform_cache/`、元数据 `music_meta.db` 等。
+- `./data/`：**存储中心**。原始音频 `raw/`、波形缓存 `waveform_cache/`、旧版元数据 `music_meta.db` 等。
 - `./checkpoints/`：**模型权重库**。存 `.pth` 权重供推理加载。
-- `./tests/`：**测试套件**。含 `conftest.py`、`test_auth.py`、`test_jwt.py`、`test_preprocessing.py`。
+- `./tests/`：**测试套件**。含 `conftest.py`、`test_auth.py`、`test_jwt.py`、`test_preprocessing.py`、`test_search.py`、`test_batch_extract.py`。
 - `./Dockerfile`：容器镜像定义。基于 `python:3.11-slim`，安装 `ffmpeg` + `libsndfile1`，离线从 `wheels/` 装 Python 依赖。
 - `./docker-compose.yml`：双服务编排（`music-search` FastAPI 容器 + `caddy_proxy` Caddy 容器）。
 - `./Caddyfile`：Caddy 反向代理配置，自动为 `evanesce.site` 申请 / 续期 Let's Encrypt 证书。
@@ -118,18 +122,21 @@ Caddy 监听 80/443，反代到 `music-search:8000`。宿主机必须预先放�
    不要 创建 Vue CLI / Vite / webpack / `package.json` / `node_modules/`。本项目**严格维持单文件 `index.html` 开发**，所有依赖通过 `<script src="https://unpkg.com/...">` 或 `<script type="module" src="https://esm.sh/...">` 的 CDN 方式无包管理引入。
 
 4. **绝对禁止随意 DROP 或重置数据库结构**
-   业务已深度依赖 `users.id` 主键、`favorites (user_id, song_path) UNIQUE`、`search_history` 时间戳等约束。不要 手动触发 `init_db.py` 内的 DROP 逻辑，**会清空整个产品的线上用户数据**。
+   业务已深度依赖 `users.id` 主键、`favorites (user_id, file_path) UNIQUE`、`search_history` 时间戳等约束。当前 `init_db.py` 仍是旧版 `data/music_meta.db` 脚本，会删除目标库 `songs` 记录；不要把它用于生产主库。主库 `music_hash.db` 的结构变更必须走非破坏式迁移或由 `batch_extract.py` 的临时表提交流程完成。
 
 5. **绝对禁止把 `wheels/` 提交进 git**
    `wheels/` 体积 337 MB，已在 `.gitignore` 中屏蔽。生产部署时通过 `pip download -r requirements.txt -d wheels/` 本地生成，走宿主机挂载或镜像构建上下文。一旦入库会立即撑爆仓库。
 
 6. **绝对禁止硬编码 `JWT_SECRET`**
-   生产环境必须通过环境变量 `JWT_SECRET` 注入强随机密钥（当前 `docker-compose.yml` 通过 `environment` 字段读取）。代码里的默认值 `"vectortune-dev-secret-change-in-production"` 只在本地开发时生效。一旦泄漏，任何人都能伪造任意用户的 token。
+   生产环境必须通过环境变量 `JWT_SECRET` 注入强随机密钥（当前 `docker-compose.yml` 通过 `environment` 字段读取）。代码没有可用默认密钥；缺失或仍使用旧默认值时会直接拒绝启动。一旦密钥泄漏，任何人都能伪造任意用户的 token。
 
-7. **修改 `main.py` 路由时务必保留 JWT 鉴权顺序**
+7. **生产 HTTPS 必须启用 Secure Cookie**
+   登录态通过 httpOnly Cookie 承载 JWT。生产环境经 Caddy HTTPS 访问时，必须设置 `COOKIE_SECURE=1`；本地 `http://127.0.0.1:8000` 调试可不设置，代码默认按非 Secure Cookie 处理。
+
+8. **修改 `main.py` 路由时务必保留 JWT 鉴权顺序**
    所有涉及用户数据的端点（收藏、历史）都走 `get_current_user(authorization)` 从 JWT payload 提取 `user_id`，**不要信任前端传入的 `user_id` 字段**。绕过此机制会引入水平越权漏洞。
 
-8. **生产部署更新 UI 必须走 `docker compose up -d --build`**
+9. **生产部署更新 UI 必须走 `docker compose up -d --build`**
    单改 `index.html` 不触发容器重建是无效的（`Dockerfile` 用 `COPY . .` 把前端烧进镜像）。如需前端热更，应将 `index.html` 加入 `docker-compose.yml` 的 volume 挂载段。
 
 ## Production Deployment
@@ -142,6 +149,7 @@ Caddy 监听 80/443，反代到 `music-search:8000`。宿主机必须预先放�
 | **反代链路** | 用户 → Caddy(443, HTTPS) → `music-search:8000` (FastAPI) |
 | **SSL 证书** | Caddy 自动申请 / 续期 Let's Encrypt，持久化在 `caddy_data` volume |
 | **数据 volumes** | `./data`、`./checkpoints`、`./music_hash.db`、`./music_hash.index` 全部宿主机挂载 |
+| **敏感环境变量** | `.env` 必须配置 `JWT_SECRET`，生产 HTTPS 必须配置 `COOKIE_SECURE=1` |
 | **更新工作流** | `sudo -i` → `cd /root/music-search-system` → `git pull origin <branch>` → `docker compose up -d --build music-search` |
 | **不重建镜像即可热更场景** | 修改 `Caddyfile` / `docker-compose.yml` / 纯文档 |
 
