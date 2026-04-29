@@ -1429,6 +1429,7 @@
                 // 🌟 API 地址自动推断（本地/服务器零配置切换）
                 // ==========================================
                 const API_BASE = window.location.origin;
+                axios.defaults.withCredentials = true;
 
                 const selectedFile = ref(null);
                 const isSearching = ref(false);
@@ -1454,7 +1455,7 @@
                 };
 
                 const currentUser = ref(null);
-                const authToken = ref(null);  // 🔐 JWT 令牌
+                const authToken = ref(null);  // 兼容旧判断；真实令牌由 httpOnly Cookie 托管
                 const showAuthModal = ref(false);
                 const authMode = ref('login');
                 const authForm = ref({ username: '', password: '' });
@@ -1473,10 +1474,8 @@
                 const favList = ref([]);
                 const favSet = ref(new Set());
 
-                // 🔐 生成带鉴权头的 axios 配置
-                const authHeaders = () => ({
-                    headers: { 'Authorization': `Bearer ${authToken.value}` }
-                });
+                // 🔐 鉴权 Cookie 自动随同源请求携带，前端不直接持有 JWT
+                const authHeaders = () => ({});
 
                 // 🕐 搜索历史状态
                 const showHistoryModal = ref(false);
@@ -1499,12 +1498,11 @@
                 };
 
                 onMounted(() => {
-                    // 恢复登录态（用户信息 + JWT 令牌）
+                    // 恢复登录态（仅用户信息；JWT 由 httpOnly Cookie 管理）
                     const savedUser = localStorage.getItem('music_app_user');
-                    const savedToken = localStorage.getItem('music_app_token');
-                    if (savedUser && savedToken) {
+                    if (savedUser) {
                         currentUser.value = JSON.parse(savedUser);
-                        authToken.value = savedToken;
+                        authToken.value = 'cookie';
                         fetchFavorites();
                     }
 
@@ -1561,11 +1559,11 @@
                     customAlert(`当前账号：${currentUser.value.username}`, "用户信息");
                 };
 
-                const logout = () => {
+                const logout = async () => {
+                    try { await axios.post(`${API_BASE}/logout`); } catch (e) { }
                     currentUser.value = null;
                     authToken.value = null;
                     localStorage.removeItem('music_app_user');
-                    localStorage.removeItem('music_app_token');
                     favList.value = [];
                     favSet.value.clear();
                 };
@@ -1581,10 +1579,9 @@
                                     user_id: response.data.data.user_id,
                                     username: response.data.data.username
                                 };
-                                // 🔐 保存 JWT 令牌
-                                authToken.value = response.data.data.access_token;
+                                // 🔐 前端只保存展示用用户信息，不保存 JWT
+                                authToken.value = 'cookie';
                                 localStorage.setItem('music_app_user', JSON.stringify(currentUser.value));
-                                localStorage.setItem('music_app_token', authToken.value);
                                 showAuthModal.value = false;
                                 fetchFavorites();
                             } else {
@@ -1675,9 +1672,7 @@
                     const formData = new FormData();
                     formData.append('file', selectedFile.value);
                     try {
-                        // 🔐 已登录时附带 token，后端会自动记录历史
                         const headers = { 'Content-Type': 'multipart/form-data' };
-                        if (authToken.value) headers['Authorization'] = `Bearer ${authToken.value}`;
                         const response = await axios.post(`${API_BASE}/search`, formData, { headers });
                         if (response.data.code === 200) {
                             results.value = response.data.data;

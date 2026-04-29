@@ -71,3 +71,29 @@ def test_upload_rejected_too_large(client: TestClient):
         "file": ("large.wav", io.BytesIO(large), "audio/wav")
     })
     assert resp.status_code == 413
+
+
+def test_upload_uses_server_generated_temp_path(client: TestClient, monkeypatch):
+    import os
+    import tempfile
+
+    seen = {}
+
+    def fake_search_music(temp_file_path, index, model):
+        seen["path"] = temp_file_path
+        assert os.path.exists(temp_file_path)
+        return []
+
+    import main
+    monkeypatch.setattr(main, "search_music", fake_search_music)
+
+    resp = client.post("/search", files={
+        "file": ("../../owned.wav", b"fake wav data", "audio/wav")
+    })
+
+    assert resp.status_code == 200
+    assert resp.json()["code"] == 200
+    assert os.path.dirname(seen["path"]) == tempfile.gettempdir()
+    assert os.path.basename(seen["path"]).startswith("music_upload_")
+    assert not os.path.exists(seen["path"])
+    assert not os.path.exists("owned.wav")

@@ -21,3 +21,6 @@ music_hash.db
 
 # Docker 离线依赖包（仅部署时使用，不入库）
 wheels/
+
+# 本地/生产环境变量，包含 JWT_SECRET 等敏感信息
+.env

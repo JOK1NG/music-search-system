@@ -1,5 +1,8 @@
 import jwt
+import os
 import pytest
+import subprocess
+import sys
 from datetime import datetime, timedelta, timezone
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRE_DAYS
 
@@ -27,3 +30,19 @@ def test_jwt_expired():
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     with pytest.raises(jwt.ExpiredSignatureError):
         jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+
+
+def test_jwt_secret_is_required_for_import():
+    env = os.environ.copy()
+    env.pop("JWT_SECRET", None)
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import main"],
+        cwd=os.getcwd(),
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "JWT_SECRET" in result.stderr

@@ -10,13 +10,11 @@ search.py —— 在线检索大脑
     否则会触发哈希空间坍塌 + Domain Shift（详见 AGENTS.md 安全栏 #2）。
 """
 
-import os                                # 仅备扩展用（路径处理），当前未直接调用
 import torch                              # 深度学习推理引擎，承载 AudioHashNet 前向
-import librosa                            # 音频 DSP 工具：解码、Mel 频谱、RMS 能量
-import numpy as np                        # 张量↔ndarray 互转 & packbits 比特打包
 import sqlite3                            # 通过 faiss_id 反查歌曲元数据（标题/作者/路径）
 import faiss                              # 向量检索引擎，使用 IndexBinaryFlat 做汉明距离
 from model import AudioHashNet            # 自研 CNN 深度哈希网络（128bit 输出）
+from preprocessing import load_audio, pad_audio, slice_best_windows, extract_hash_from_window
 
 # --- ⚙️ 全局配置参数 ---
 # SQLite 元数据库：存 songs 表（faiss_id ↔ title/artist/file_path 映射）
@@ -84,12 +82,12 @@ def search_music(test_audio_path, index, model, top_k=150):
     # ==========================================
     # sr=22050：与 batch_extract.py 完全一致，重采样保证频域特征对齐
     # duration=15.0：只取前 15 秒，控制最大计算量并避免长音频拖慢响应
-    y, sr = librosa.load(test_audio_path, sr=22050, duration=15.0)
+    y, sr = load_audio(test_audio_path, duration=15.0)
 
     # 极短音频保护：不足 5s 的样本 0-pad 到 5s，避免下方滑动窗口取不到一帧
     total_duration = len(y) / sr
     if total_duration < 5.0:
-        y = np.pad(y, (0, int(sr * 5.0) - len(y)))
+        y = pad_audio(y, 5.0, sr=sr)
         total_duration = 5.0
 
     # 通过任意一个参数推断当前模型所在设备（CPU/GPU），后续张量需 to(device)
@@ -101,50 +99,13 @@ def search_music(test_audio_path, index, model, top_k=150):
     # 设计动机：音频开头/结尾常含静音、淡入淡出，直接拿首段切片做查询很容易撞库失败。
     # 这里以 1s 为步长滑动取若干 5s 窗，按 RMS（均方根值（Root Mean Square））能量降序排序，挑能量最高的 Top 3 当查询，
     # 相当于做"安静段过滤"，显著提升对真实人声/前奏不一致样本的鲁棒性。
-    window_candidates = []
-    # max(1, ...) 兜底：当 total_duration ≤ 5 时仍至少跑一次循环
-    for start_sec in range(0, max(1, int(total_duration - 4))):
-        start_sample = int(start_sec * sr)
-        end_sample = int((start_sec + 5.0) * sr)
-        y_window = y[start_sample:end_sample]
-
-        # 末窗可能不足 5s（音频尾部），同样 0-pad 到固定长度，确保 Mel 频谱形状统一
-        if len(y_window) < int(sr * 5.0):
-            y_window = np.pad(y_window, (0, int(sr * 5.0) - len(y_window)))
-
-        # RMS（Root Mean Square）= 时域能量，对每个窗口取均值作为"响度评分"
-        energy = np.mean(librosa.feature.rms(y=y_window))
-        window_candidates.append((energy, y_window))
-
-    # 按能量降序：能量大 = 信息量大 = 更利于哈希区分
-    window_candidates.sort(key=lambda x: x[0], reverse=True)
-    best_windows = window_candidates[:3]  # 仅保留 Top 3，控制下游推理成本
+    best_windows = slice_best_windows(y, window_duration=5.0, n_windows=3, sr=sr)
 
     # 把 3 个最优窗口分别过一遍 CNN，得到 3 个查询哈希码（多查询提升召回）
     queries = []
-    for energy, y_window in best_windows:
-        # ---- 时域 → 频域：转 Mel 频谱（n_mels=128 与训练严格一致）----
-        spec = librosa.feature.melspectrogram(y=y_window, sr=sr, n_mels=128)
-        # 功率谱 → 分贝刻度，逼近人耳听觉感知，并压缩动态范围
-        spec_db = librosa.power_to_db(spec, ref=np.max)
-        # 升 batch 维 (1,) 与通道维 (1,)，得到 [1, 1, 128, T] 形状的 4D 张量
-        tensor = torch.FloatTensor(spec_db).unsqueeze(0).unsqueeze(0).to(device)
-
-        # 推理路径关闭梯度计算，省显存提速度
-        with torch.no_grad():
-            hash_out = model(tensor)  # 输出 [1, 128] 的连续浮点编码
-
-            # 🌟 核心破局魔法：必须和建库保持一致的中值过滤！
-            # 解释：早期使用 `> 0` 死阈值时，模型坍塌后输出会全偏一侧，
-            # 导致所有样本哈希码几乎相同，全库命中率瞬间归零。
-            # 改用动态中值 → 强制每个样本恰好一半比特为 1、一半为 0，
-            # 等价于一个"自适应去均值"操作，彻底破解 Domain Shift 与坍塌。
-            threshold = hash_out.median()
-            binary_code = (hash_out > threshold).int().cpu().numpy()
-
-            # 把 128 个 0/1 比特位打包成 16 字节 uint8，符合 Faiss BinaryFlat 输入规范
-            query_packed = np.packbits(binary_code, axis=1).astype('uint8')
-            queries.append(query_packed)
+    for _energy, y_window, _start_sec in best_windows:
+        query_packed = extract_hash_from_window(y_window, model, device, sr=sr)
+        queries.append(query_packed)
 
     # 极端兜底：若上游全部失败（极罕见），返回空结果让前端显示"未找到"
     if not queries:

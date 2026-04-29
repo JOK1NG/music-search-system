@@ -1,11 +1,10 @@
 import os
 import torch
-import librosa
-import numpy as np
 import sqlite3
 import faiss
 from model import AudioHashNet
 from tinytag import TinyTag
+from preprocessing import load_audio, pad_audio, extract_hash_from_window
 
 # --- ⚙️ 配置路径 ---
 RAW_PATH = "./data/raw"
@@ -64,11 +63,11 @@ def extract_features():
                     artist = "Unknown"
 
                 # 提取前 30 秒进行建库切片
-                y, sr = librosa.load(file_path, sr=22050, duration=30.0)
+                y, sr = load_audio(file_path, duration=30.0)
                 total_duration = len(y) / sr
 
                 if total_duration < 5.0:
-                    y = np.pad(y, (0, int(sr * 5.0) - len(y)))
+                    y = pad_audio(y, 5.0, sr=sr)
                     total_duration = 5.0
 
                 # 滑动窗口切香肠
@@ -77,17 +76,8 @@ def extract_features():
                     end_sample = int((start_sec + 5.0) * sr)
                     y_window = y[start_sample:end_sample]
 
-                    spec = librosa.feature.melspectrogram(y=y_window, sr=sr, n_mels=128)
-                    spec_db = librosa.power_to_db(spec, ref=np.max)
-                    tensor = torch.FloatTensor(spec_db).unsqueeze(0).unsqueeze(0).to(device)
-
-                    hash_out = model(tensor)
-
-                    # 🌟 核心破局魔法：动态中值哈希 (克服特征漂移！)
-                    threshold = hash_out.median()
-                    binary_code = (hash_out > threshold).int().cpu().numpy()
-
-                    query_packed = np.packbits(binary_code, axis=1).astype('uint8')
+                    y_window = pad_audio(y_window, 5.0, sr=sr)
+                    query_packed = extract_hash_from_window(y_window, model, device, sr=sr)
 
                     # 存入 Faiss 和 SQLite
                     index.add(query_packed)
