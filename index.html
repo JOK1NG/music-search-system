@@ -1436,6 +1436,7 @@
                 const results = ref([]);
                 const showResultsModal = ref(false);
                 let wavesurfer = null;
+                let waveformObjectUrl = null;
 
                 // ==========================================
                 // 🎵 全局单例播放器状态
@@ -1519,6 +1520,17 @@
                         normalize: true
                     });
                     wavesurfer.on('click', () => { wavesurfer.playPause(); });
+                });
+
+                onUnmounted(() => {
+                    if (waveformObjectUrl) {
+                        URL.revokeObjectURL(waveformObjectUrl);
+                        waveformObjectUrl = null;
+                    }
+                    if (wavesurfer) {
+                        wavesurfer.destroy();
+                        wavesurfer = null;
+                    }
                 });
 
                 const fetchFavorites = async () => {
@@ -1663,7 +1675,13 @@
 
                 const handleFileUpload = (event) => {
                     const file = event.target.files[0];
-                    if (file) { selectedFile.value = file; results.value = []; wavesurfer.load(URL.createObjectURL(file)); }
+                    if (file) {
+                        if (waveformObjectUrl) URL.revokeObjectURL(waveformObjectUrl);
+                        waveformObjectUrl = URL.createObjectURL(file);
+                        selectedFile.value = file;
+                        results.value = [];
+                        wavesurfer.load(waveformObjectUrl);
+                    }
                 };
 
                 const searchMusic = async () => {

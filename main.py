@@ -18,6 +18,18 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
+from config import (
+    ALLOWED_AUDIO_EXTENSIONS,
+    CORS_ORIGIN_LIST,
+    DB_PATH,
+    JWT_ALGORITHM,
+    JWT_EXPIRE_DAYS,
+    JWT_SECRET,
+    MAX_UPLOAD_SIZE,
+    RATE_LIMIT_AUTH,
+    RATE_LIMIT_GENERAL,
+    RATE_LIMIT_SEARCH,
+)
 # 导入你刚刚写好的终极版搜索器
 from search import load_system, search_music
 
@@ -26,29 +38,11 @@ from search import load_system, search_music
 # ==========================================
 # 生产环境部署时，请通过环境变量 JWT_SECRET 设置一个强随机密钥：
 #   export JWT_SECRET="your-super-secret-key-here"
-JWT_SECRET = os.environ.get("JWT_SECRET")
 if not JWT_SECRET or JWT_SECRET == "vectortune-dev-secret-change-in-production":
     raise RuntimeError(
         "JWT_SECRET 环境变量未设置或仍为旧默认值。"
         "请配置强随机密钥，例如: export JWT_SECRET=$(openssl rand -hex 32)"
     )
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRE_DAYS = 7  # 令牌有效期：7 天
-DB_PATH = os.environ.get("DB_PATH", "music_hash.db")
-MAX_UPLOAD_SIZE = int(os.environ.get("MAX_UPLOAD_SIZE", 50 * 1024 * 1024))
-ALLOWED_AUDIO_EXTENSIONS = {
-    ext.strip().lower()
-    for ext in os.environ.get("ALLOWED_AUDIO_EXTENSIONS", ".mp3,.wav,.flac,.ogg,.m4a,.aac").split(",")
-    if ext.strip()
-}
-CORS_ORIGIN_LIST = [
-    origin.strip()
-    for origin in os.environ.get("CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000").split(",")
-    if origin.strip()
-]
-RATE_LIMIT_SEARCH = int(os.environ.get("RATE_LIMIT_SEARCH", 30))
-RATE_LIMIT_AUTH = int(os.environ.get("RATE_LIMIT_AUTH", 100))
-RATE_LIMIT_GENERAL = int(os.environ.get("RATE_LIMIT_GENERAL", 300))
 
 
 class RateLimiter:

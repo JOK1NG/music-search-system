@@ -5,17 +5,14 @@ DB_PATH = os.environ.get("DB_PATH", "music_hash.db")
 INDEX_PATH = os.environ.get("INDEX_PATH", "music_hash.index")
 MODEL_PATH = os.environ.get("MODEL_PATH", "./checkpoints/hash_model_epoch_3.pth")
 RAW_PATH = os.environ.get("RAW_PATH", "./data/raw")
+TOP_K = int(os.environ.get("TOP_K", 150))
+TOP_N_RESULTS = int(os.environ.get("TOP_N_RESULTS", 5))
 
 SAMPLE_RATE = int(os.environ.get("SAMPLE_RATE", 22050))
 WINDOW_DURATION = float(os.environ.get("WINDOW_DURATION", 5.0))
 N_MELS = int(os.environ.get("N_MELS", 128))
 
 JWT_SECRET = os.environ.get("JWT_SECRET")
-if not JWT_SECRET or JWT_SECRET == "vectortune-dev-secret-change-in-production":
-    raise RuntimeError(
-        "JWT_SECRET 环境变量未设置或仍为旧默认值。"
-        "请配置强随机密钥，例如: export JWT_SECRET=$(openssl rand -hex 32)"
-    )
 JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_DAYS = int(os.environ.get("JWT_EXPIRE_DAYS", 7))
 

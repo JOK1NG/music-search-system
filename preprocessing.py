@@ -2,10 +2,7 @@ import librosa
 import numpy as np
 import torch
 
-
-SAMPLE_RATE = 22050
-N_MELS = 128
-WINDOW_DURATION = 5.0
+from config import N_MELS, SAMPLE_RATE, WINDOW_DURATION
 
 
 def load_audio(file_path, duration=None):

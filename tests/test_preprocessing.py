@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+from config import N_MELS, SAMPLE_RATE, WINDOW_DURATION
 from preprocessing import (
     pad_audio,
     build_mel_spectrogram,
@@ -11,18 +11,18 @@ from preprocessing import (
 
 def test_pad_audio():
     import numpy as np
-    sr = 22050
+    sr = SAMPLE_RATE
     short = np.zeros(int(sr * 2), dtype=np.float32)
-    padded = pad_audio(short, 5.0)
-    assert len(padded) == int(sr * 5.0)
+    padded = pad_audio(short, WINDOW_DURATION)
+    assert len(padded) == int(sr * WINDOW_DURATION)
 
 
 def test_build_mel_spectrogram():
     import numpy as np
-    sr = 22050
+    sr = SAMPLE_RATE
     y = np.random.randn(int(sr * 3)).astype(np.float32)
     spec = build_mel_spectrogram(y, sr)
-    assert spec.shape[0] == 128
+    assert spec.shape[0] == N_MELS
     assert spec.shape[1] > 0
 
 
@@ -35,7 +35,7 @@ def test_binarize_hash():
 
 
 def test_trim_silence_all_silent_segment_returns_original():
-    sr = 22050
+    sr = SAMPLE_RATE
     y = np.zeros(int(sr * 4), dtype=np.float32)
     trimmed = trim_silence(y, top_db=30, sr=sr)
     assert np.array_equal(trimmed, y)
@@ -43,10 +43,10 @@ def test_trim_silence_all_silent_segment_returns_original():
 
 def test_slice_best_windows():
     import numpy as np
-    sr = 22050
+    sr = SAMPLE_RATE
     y = np.random.randn(int(sr * 10)).astype(np.float32)
-    windows = slice_best_windows(y, window_duration=5.0, n_windows=3)
+    windows = slice_best_windows(y, window_duration=WINDOW_DURATION, n_windows=3)
     assert len(windows) == 3
     for energy, y_window, start_sec in windows:
-        assert len(y_window) == int(sr * 5.0)
+        assert len(y_window) == int(sr * WINDOW_DURATION)
         assert start_sec >= 0
