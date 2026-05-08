@@ -3,7 +3,7 @@ import os
 
 DB_PATH = os.environ.get("DB_PATH", "music_hash.db")
 INDEX_PATH = os.environ.get("INDEX_PATH", "music_hash.index")
-MODEL_PATH = os.environ.get("MODEL_PATH", "./checkpoints/hash_model_epoch_3.pth")
+MODEL_PATH = os.environ.get("MODEL_PATH", "./checkpoints/hash_model_v2_epoch_10_best.pth")
 RAW_PATH = os.environ.get("RAW_PATH", "./data/raw")
 TOP_K = int(os.environ.get("TOP_K", 150))
 TOP_N_RESULTS = int(os.environ.get("TOP_N_RESULTS", 5))

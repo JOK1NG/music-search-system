@@ -730,6 +730,19 @@
             padding-bottom: 0;
         }
 
+        .result-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .result-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
         .rank {
             font-size: 20px;
             font-weight: 800;
@@ -749,6 +762,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 12px;
             margin-bottom: 6px;
         }
 
@@ -758,6 +772,10 @@
             font-size: 18px;
             font-weight: 700;
             letter-spacing: -0.3px;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .song-info p {
@@ -777,6 +795,42 @@
             font-family: monospace;
         }
 
+        .hamming-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            white-space: nowrap;
+            flex-shrink: 0;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        }
+
+        .hamming-badge.exact {
+            color: #065f46;
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        }
+
+        .hamming-badge.close {
+            color: #1d4ed8;
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        }
+
+        .hamming-badge.loose {
+            color: #92400e;
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+        }
+
+        .hamming-label {
+            opacity: 0.72;
+            font-weight: 700;
+        }
+
         /* ❤️ 收藏按钮：Apple Music 同款 SVG 双态 + 心跳 */
         .heart-btn {
             background: none;
@@ -789,6 +843,10 @@
             justify-content: center;
             color: #94a3b8;
             transition: color 0.2s ease, transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .result-actions .heart-btn {
+            margin-left: 0;
         }
 
         .heart-icon {
@@ -821,10 +879,21 @@
         }
 
         @keyframes heart-beat {
-            0%   { transform: scale(1); }
-            30%  { transform: scale(0.85); }
-            60%  { transform: scale(1.22); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            30% {
+                transform: scale(0.85);
+            }
+
+            60% {
+                transform: scale(1.22);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         /* 迷你播放器不再需要原生 audio 样式覆写 */
@@ -839,18 +908,43 @@
             border-radius: 50%;
             width: 36px;
             height: 36px;
+            padding: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             flex-shrink: 0;
             font-size: 14px;
+            line-height: 1;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
         }
-        .play-btn:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3); }
-        .play-btn:active { transform: scale(0.94); }
-        .play-btn.playing { background: #6366f1; box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4); }
+
+        .play-icon {
+            width: 50%;
+            height: 50%;
+            display: block;
+            flex-shrink: 0;
+        }
+
+        .mini-play-btn .play-icon {
+            width: 55%;
+            height: 55%;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3);
+        }
+
+        .play-btn:active {
+            transform: scale(0.94);
+        }
+
+        .play-btn.playing {
+            background: #6366f1;
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+        }
 
         /* ========================================= */
         /* 🎵 底部迷你播放器 */
@@ -874,14 +968,24 @@
             box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.06);
             animation: slideUpPlayer 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
         @keyframes slideUpPlayer {
-            from { transform: translateY(100%); opacity: 0; }
-            to   { transform: translateY(0);    opacity: 1; }
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
+
         .mini-player-info {
             flex: 1;
             min-width: 0;
         }
+
         .mini-player-title {
             font-size: 14px;
             font-weight: 700;
@@ -890,6 +994,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         .mini-player-artist {
             font-size: 12px;
             color: var(--text-secondary);
@@ -898,12 +1003,14 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
         .mini-player-controls {
             display: flex;
             align-items: center;
             gap: 10px;
             flex-shrink: 0;
         }
+
         .mini-ctrl-btn {
             background: none;
             border: none;
@@ -914,7 +1021,11 @@
             transition: background 0.15s;
             line-height: 1;
         }
-        .mini-ctrl-btn:hover { background: rgba(0,0,0,0.06); }
+
+        .mini-ctrl-btn:hover {
+            background: rgba(0, 0, 0, 0.06);
+        }
+
         .mini-play-btn {
             background: var(--btn-dark);
             color: white;
@@ -922,15 +1033,21 @@
             border-radius: 50%;
             width: 40px;
             height: 40px;
+            padding: 0;
             font-size: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
+            line-height: 1;
             transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(15,23,42,0.2);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
         }
-        .mini-play-btn:hover { transform: scale(1.08); }
+
+        .mini-play-btn:hover {
+            transform: scale(1.08);
+        }
+
         .mini-progress-wrap {
             flex: 2;
             max-width: 320px;
@@ -938,21 +1055,24 @@
             flex-direction: column;
             gap: 4px;
         }
+
         .mini-progress-bar {
             width: 100%;
             height: 3px;
-            background: rgba(0,0,0,0.08);
+            background: rgba(0, 0, 0, 0.08);
             border-radius: 99px;
             cursor: pointer;
             position: relative;
             overflow: hidden;
         }
+
         .mini-progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #6366f1, #a78bfa);
             border-radius: 99px;
             transition: width 0.3s linear;
         }
+
         .mini-progress-time {
             display: flex;
             justify-content: space-between;
@@ -1019,12 +1139,39 @@
             border-bottom: 1px solid rgba(0, 0, 0, 0.06);
             padding-bottom: 20px;
             font-size: 22px;
-            margin-bottom: 25px;
+            margin: 0 0 25px 0;
+        }
+
+        .modal-title-row {
+            position: relative;
+        }
+
+        .modal-title-action {
+            position: absolute;
+            top: 2px;
+            right: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 8px;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .modal-title-action:hover {
+            background: rgba(15, 23, 42, 0.06);
+            color: var(--text-hero);
         }
 
         .auth-input {
             width: 100%;
-            padding: 18px;
+            padding: 16px;
             margin-bottom: 15px;
             border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 14px;
@@ -1109,44 +1256,128 @@
 
         /* 中等屏幕：平板 / 窄笔记本 */
         @media (max-width: 768px) {
-            .header h1 { font-size: 18px; letter-spacing: 2px; }
-            .brand-logo svg { width: 32px; height: 32px; }
-            .user-actions { gap: 8px; }
-            .hero-section { padding-bottom: 8vh; }
-            .hero-section.has-player { padding-bottom: 16vh; }
-            .btn-results, .btn-user { font-size: 13px; padding: 8px 12px; }
-            .filename-pill { max-width: 80vw; }
-            #waveform-container { max-width: 90vw; }
+            .header h1 {
+                font-size: 18px;
+                letter-spacing: 2px;
+            }
+
+            .brand-logo svg {
+                width: 32px;
+                height: 32px;
+            }
+
+            .user-actions {
+                gap: 8px;
+            }
+
+            .hero-section {
+                padding-bottom: 8vh;
+            }
+
+            .hero-section.has-player {
+                padding-bottom: 16vh;
+            }
+
+            .btn-results,
+            .btn-user {
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+
+            .filename-pill {
+                max-width: 80vw;
+            }
+
+            #waveform-container {
+                max-width: 90vw;
+            }
         }
 
         /* 极窄屏幕：手机竖屏 */
         @media (max-width: 480px) {
-            .header h1 { display: none; }
-            .header { padding-top: 2.5vh; }
-            .hero-section { padding-bottom: 6vh; max-width: 100%; }
-            .hero-section.has-player { padding-bottom: 14vh; }
-            .action-dock { gap: 8px; flex-wrap: wrap; justify-content: center; }
-            .btn-upload, .btn-primary { padding: 14px 18px; font-size: 14px; }
-            .filename-pill { max-width: 92vw; font-size: 13px; }
-            .user-menu { min-width: 170px; }
-            .mini-player { padding: 10px 14px; }
-            .mini-progress-wrap { display: none; }
+            .header h1 {
+                display: none;
+            }
+
+            .header {
+                padding-top: 2.5vh;
+            }
+
+            .hero-section {
+                padding-bottom: 6vh;
+                max-width: 100%;
+            }
+
+            .hero-section.has-player {
+                padding-bottom: 14vh;
+            }
+
+            .action-dock {
+                gap: 8px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .btn-upload,
+            .btn-primary {
+                padding: 14px 18px;
+                font-size: 14px;
+            }
+
+            .filename-pill {
+                max-width: 92vw;
+                font-size: 13px;
+            }
+
+            .user-menu {
+                min-width: 170px;
+            }
+
+            .mini-player {
+                padding: 10px 14px;
+            }
+
+            .mini-progress-wrap {
+                display: none;
+            }
         }
 
         /* 矮屏幕：平板横屏 / 短屏笔记本（≤ 600 高） */
         @media (max-height: 600px) {
-            .header { padding-top: 2vh; }
-            .hero-section { padding-bottom: 8vh; }
-            .hero-section.has-player { padding-bottom: 16vh; }
+            .header {
+                padding-top: 2vh;
+            }
+
+            .hero-section {
+                padding-bottom: 8vh;
+            }
+
+            .hero-section.has-player {
+                padding-bottom: 16vh;
+            }
         }
 
         /* 极矮屏幕：横屏手机 */
         @media (max-height: 480px) {
-            .header { padding-top: 1.5vh; }
-            .hero-section { padding-bottom: 5vh; }
-            .hero-section.has-player { padding-bottom: 12vh; }
-            .upload-preview { gap: 6px; }
-            #waveform-container { max-height: 28px; }
+            .header {
+                padding-top: 1.5vh;
+            }
+
+            .hero-section {
+                padding-bottom: 5vh;
+            }
+
+            .hero-section.has-player {
+                padding-bottom: 12vh;
+            }
+
+            .upload-preview {
+                gap: 6px;
+            }
+
+            #waveform-container {
+                max-height: 28px;
+            }
         }
     </style>
 </head>
@@ -1194,8 +1425,8 @@
                         <button class="btn-user">
                             <svg class="btn-user-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" />
-                                <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" />
+                                <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" />
                             </svg>
                             <span>{{ currentUser.username }}</span>
                             <span class="user-caret">▾</span>
@@ -1217,15 +1448,15 @@
             </div>
         </div>
 
-        <!-- OpenAI 巨型标题主视觉 (Hero) -->
+        <!-- Hero 区域：音频上传、波形展示与检索入口 -->
         <div class="hero-section" :class="{ 'has-upload': !!selectedFile, 'has-player': !!currentTrack }">
             <!-- 📤 上传后柔展开：文件名玻璃胶囊 + 紧凑波形 -->
             <div class="upload-preview" :class="{ shown: !!selectedFile }">
                 <div class="filename-pill" v-if="selectedFile">
                     <svg class="pill-check" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
-                        <path d="M8 12.5l2.5 2.5 5.5-5.5" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M8 12.5l2.5 2.5 5.5-5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                     <span>{{ selectedFile?.name }}</span>
                 </div>
@@ -1280,13 +1511,21 @@
                             </div>
                             <p>{{ song.artist }}</p>
                         </div>
-                        <button class="play-btn" :class="{ playing: currentTrack?.file_path === song.file_path && isPlaying }"
+                        <button class="play-btn"
+                            :class="{ playing: currentTrack?.file_path === song.file_path && isPlaying }"
                             @click="playTrack(song)" style="margin-left:0;">
-                            {{ currentTrack?.file_path === song.file_path && isPlaying ? '⏸' : '▶' }}
+                            <svg v-if="currentTrack?.file_path === song.file_path && isPlaying" class="play-icon"
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M8 5h3v14H8zM13 5h3v14h-3z" />
+                            </svg>
+                            <svg v-else class="play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
                         </button>
                         <button class="heart-btn active" @click="toggleFav(song)" aria-label="取消收藏">
                             <svg class="heart-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.5 4.04 3 5.5l7 7Z" />
+                                <path
+                                    d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.5 4.04 3 5.5l7 7Z" />
                             </svg>
                         </button>
                     </div>
@@ -1294,15 +1533,12 @@
             </div>
         </div>
 
-        <!-- 搜索历史悬浮层 -->
+        <!-- 识别历史悬浮层 -->
         <div class="modal-overlay" v-if="showHistoryModal" @click.self="showHistoryModal = false">
             <div class="modal-content wide">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
-                    <h2 class="modal-title modal-subtitle" style="margin:0;">搜索历史</h2>
-                    <button v-if="historyList.length > 0" @click="clearHistory"
-                        style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;padding:4px 10px;border-radius:8px;transition:background 0.15s,color 0.15s;"
-                        onmouseover="this.style.background='rgba(15,23,42,0.06)';this.style.color='var(--text-hero)'"
-                        onmouseout="this.style.background='none';this.style.color='var(--text-secondary)'">
+                <div class="modal-title-row">
+                    <h2 class="modal-title modal-subtitle">识别历史</h2>
+                    <button v-if="historyList.length > 0" class="modal-title-action" @click="clearHistory">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M3 6h18" />
@@ -1314,16 +1550,23 @@
                         清空历史
                     </button>
                 </div>
-                <div v-if="historyList.length === 0" class="empty-state">暂无搜索记录</div>
+                <div v-if="historyList.length === 0" class="empty-state">暂无识别记录</div>
                 <div class="result-item" v-for="(item, index) in historyList" :key="index" style="padding: 14px 0;">
                     <div style="display:flex; align-items:center; gap: 10px;">
                         <button v-if="item.top_audio_url" class="play-btn"
                             :class="{ playing: currentTrack?.file_path === item.top_file_path && isPlaying }"
                             @click="playTrack({ title: item.top_title, artist: item.top_artist, audio_url: item.top_audio_url, file_path: item.top_file_path })">
-                            {{ currentTrack?.file_path === item.top_file_path && isPlaying ? '⏸' : '▶' }}
+                            <svg v-if="currentTrack?.file_path === item.top_file_path && isPlaying" class="play-icon"
+                                viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M8 5h3v14H8zM13 5h3v14h-3z" />
+                            </svg>
+                            <svg v-else class="play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
                         </button>
                         <div style="flex:1; min-width:0;">
-                            <div style="font-size:14px;font-weight:700;color:var(--text-hero);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            <div
+                                style="font-size:14px;font-weight:700;color:var(--text-hero);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                                 {{ item.top_title || '未知曲目' }}
                             </div>
                             <div style="font-size:12px;color:var(--text-secondary);margin-top:2px;">
@@ -1332,11 +1575,13 @@
                         </div>
                         <div style="text-align:right;flex-shrink:0;">
                             <div style="font-size:11px;color:#94a3b8;font-weight:500;">{{ item.searched_at }}</div>
-                            <div style="font-size:11px;color:#cbd5e1;margin-top:2px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" :title="item.query_filename">
+                            <div style="font-size:11px;color:#cbd5e1;margin-top:2px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                                :title="item.query_filename">
                                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
                                     style="vertical-align:-1px;margin-right:3px;">
-                                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                                    <path
+                                        d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                                 </svg>{{ item.query_filename }}
                             </div>
                         </div>
@@ -1366,26 +1611,45 @@
                     <div class="dot red" @click="showResultsModal = false" title="关闭"></div>
                     <div class="dot yellow"></div>
                     <div class="dot green"></div>
-                    <span class="window-title">Cortex.Engine ~ /results</span>
+                    <span class="window-title">Cortex.Engine ~ /results /hamming_distance</span>
                 </div>
                 <div class="card-body" style="max-height: calc(85vh - 60px); overflow-y: auto;">
                     <div class="result-item" v-for="res in results" :key="res.rank">
-                        <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="result-row">
                             <div class="rank">{{ res.rank }}</div>
-                            <button class="play-btn" :class="{ playing: currentTrack?.file_path === res.file_path && isPlaying }"
+                            <button class="play-btn"
+                                :class="{ playing: currentTrack?.file_path === res.file_path && isPlaying }"
                                 @click="playTrack(res)">
-                                {{ currentTrack?.file_path === res.file_path && isPlaying ? '⏸' : '▶' }}
-                            </button>
-                            <div class="song-info" style="flex: 1; min-width: 0;">
-                                <h3>{{ res.title }}</h3>
-                                <p>{{ res.artist }}</p>
-                            </div>
-                            <button class="heart-btn" :class="{ 'active': favSet.has(res.file_path) }"
-                                @click="toggleFav(res)" aria-label="收藏">
-                                <svg class="heart-icon" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.5 4.04 3 5.5l7 7Z" />
+                                <svg v-if="currentTrack?.file_path === res.file_path && isPlaying" class="play-icon"
+                                    viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M8 5h3v14H8zM13 5h3v14h-3z" />
+                                </svg>
+                                <svg v-else class="play-icon" viewBox="0 0 24 24" fill="currentColor"
+                                    aria-hidden="true">
+                                    <path d="M8 5v14l11-7z" />
                                 </svg>
                             </button>
+                            <div class="song-info" style="flex: 1; min-width: 0;">
+                                <div class="song-title-row">
+                                    <h3>{{ res.title }}</h3>
+                                </div>
+                                <p>{{ res.artist }}</p>
+                            </div>
+                            <div class="result-actions">
+                                <span class="hamming-badge" :class="hammingClass(res.distance)"
+                                    :title="'汉明距离：' + res.distance + ' bit；越小表示越相似'">
+                                    <span class="hamming-label">Hamming</span>
+                                    <span>{{ res.distance }} bit</span>
+                                    <span>{{ hammingText(res.distance) }}</span>
+                                </span>
+                                <button class="heart-btn" :class="{ 'active': favSet.has(res.file_path) }"
+                                    @click="toggleFav(res)" aria-label="收藏">
+                                    <svg class="heart-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path
+                                            d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.5 4.04 3 5.5l7 7Z" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1401,7 +1665,12 @@
             <div class="mini-player-controls">
                 <button class="mini-ctrl-btn" @click="playPrev" title="上一首">⏮</button>
                 <button class="mini-play-btn" @click="togglePlay">
-                    {{ isPlaying ? '⏸' : '▶' }}
+                    <svg v-if="isPlaying" class="play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M8 5h3v14H8zM13 5h3v14h-3z" />
+                    </svg>
+                    <svg v-else class="play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
                 </button>
                 <button class="mini-ctrl-btn" @click="playNext" title="下一首">⏭</button>
             </div>
@@ -1700,6 +1969,20 @@
                     finally { isSearching.value = false; }
                 };
 
+                const hammingClass = (distance) => {
+                    const d = Number(distance);
+                    if (d <= 8) return 'exact';
+                    if (d <= 24) return 'close';
+                    return 'loose';
+                };
+
+                const hammingText = (distance) => {
+                    const d = Number(distance);
+                    if (d <= 8) return '极近';
+                    if (d <= 24) return '相似';
+                    return '参考';
+                };
+
                 return {
                     API_BASE, selectedFile, isSearching, results, showResultsModal, handleFileUpload, searchMusic,
                     currentUser, showAuthModal, authMode, authForm, openAuth, logout, submitAuth, showUserInfo,
@@ -1707,7 +1990,8 @@
                     showHistoryModal, historyList, openHistory, clearHistory,
                     // 🎵 播放器状态与方法
                     currentTrack, isPlaying, progressPct, currentTime, duration,
-                    formatTime, playTrack, togglePlay, playPrev, playNext, seekTo, closePlayer
+                    formatTime, playTrack, togglePlay, playPrev, playNext, seekTo, closePlayer,
+                    hammingClass, hammingText
                 }
             }
         }).mount('#app');
@@ -1721,70 +2005,70 @@
         if (canvas) {
             const shaderConfig = {
                 components: [
-                        {
-                            type: 'LinearGradient',
-                            id: 'idmlka7erd1a3ktj1bs',
-                            props: {
-                                colorA: '#89a3ae',
-                                colorB: '#1c79eb',
-                                visible: true,
+                    {
+                        type: 'LinearGradient',
+                        id: 'idmlka7erd1a3ktj1bs',
+                        props: {
+                            colorA: '#89a3ae',
+                            colorB: '#1c79eb',
+                            visible: true,
+                        },
+                    },
+                    {
+                        type: 'Circle',
+                        id: 'idmlkdf7rmijk0lqj5t',
+                        props: {
+                            blendMode: 'normal-oklch',
+                            center: { x: 0.36, y: 0.85 },
+                            color: '#ae6dfe',
+                            colorSpace: 'oklab',
+                            radius: 1.8,
+                            softness: 0.59,
+                            strokeColor: '#f1dd0f',
+                            strokeThickness: 0.2,
+                        },
+                    },
+                    {
+                        type: 'WaveDistortion',
+                        id: 'idmlkdkhf522wmol0mx',
+                        props: { angle: 122, speed: 3.7 },
+                    },
+                    {
+                        type: 'CursorRipples',
+                        id: 'idmlkdi5i1xatb6dqgs',
+                        props: { decay: 20, intensity: 20, radius: 1 },
+                    },
+                    {
+                        type: 'FilmGrain',
+                        id: 'idmlkdlj6zjuxtqzizx',
+                        props: { strength: 0.2 },
+                    },
+                    {
+                        type: 'Glass',
+                        id: 'idmmcgob32j3mbenwjk',
+                        props: {
+                            aberration: 0.93,
+                            center: { x: 0.51, y: 0.4 },
+                            edgeSoftness: { mode: 'ping-pong', type: 'auto-animate', speed: 1, outputMax: 1, outputMin: 0 },
+                            fresnel: { mode: 'ping-pong', type: 'auto-animate', speed: 1, outputMax: 1, outputMin: 0 },
+                            highlight: { mode: 'ping-pong', type: 'auto-animate', speed: 1, outputMax: 2, outputMin: 0 },
+                            innerZoom: 2,
+                            refraction: {
+                                type: 'map',
+                                source: 'idmlkdf7rmijk0lqj5t',
+                                channel: 'alpha',
+                                inputMax: 1,
+                                inputMin: 0,
+                                outputMax: 2,
+                                outputMin: 0,
                             },
+                            shapeSdfUrl: 'https://data.shaders.com/storage/v1/object/public/user-uploaded-images/user_3CgMWfYRE6B6Ti82PPqKOp9ggDy/EVPTFNRrgY41_sdf.bin',
+                            shapeType: '',
+                            thickness: 0.14,
+                            visible: true,
                         },
-                        {
-                            type: 'Circle',
-                            id: 'idmlkdf7rmijk0lqj5t',
-                            props: {
-                                blendMode: 'normal-oklch',
-                                center: { x: 0.36, y: 0.85 },
-                                color: '#ae6dfe',
-                                colorSpace: 'oklab',
-                                radius: 1.8,
-                                softness: 0.59,
-                                strokeColor: '#f1dd0f',
-                                strokeThickness: 0.2,
-                            },
-                        },
-                        {
-                            type: 'WaveDistortion',
-                            id: 'idmlkdkhf522wmol0mx',
-                            props: { angle: 122, speed: 3.7 },
-                        },
-                        {
-                            type: 'CursorRipples',
-                            id: 'idmlkdi5i1xatb6dqgs',
-                            props: { decay: 20, intensity: 20, radius: 1 },
-                        },
-                        {
-                            type: 'FilmGrain',
-                            id: 'idmlkdlj6zjuxtqzizx',
-                            props: { strength: 0.2 },
-                        },
-                        {
-                            type: 'Glass',
-                            id: 'idmmcgob32j3mbenwjk',
-                            props: {
-                                aberration: 0.93,
-                                center: { x: 0.51, y: 0.4 },
-                                edgeSoftness: { mode: 'ping-pong', type: 'auto-animate', speed: 1, outputMax: 1, outputMin: 0 },
-                                fresnel: { mode: 'ping-pong', type: 'auto-animate', speed: 1, outputMax: 1, outputMin: 0 },
-                                highlight: { mode: 'ping-pong', type: 'auto-animate', speed: 1, outputMax: 2, outputMin: 0 },
-                                innerZoom: 2,
-                                refraction: {
-                                    type: 'map',
-                                    source: 'idmlkdf7rmijk0lqj5t',
-                                    channel: 'alpha',
-                                    inputMax: 1,
-                                    inputMin: 0,
-                                    outputMax: 2,
-                                    outputMin: 0,
-                                },
-                                shapeSdfUrl: 'https://data.shaders.com/storage/v1/object/public/user-uploaded-images/user_3CgMWfYRE6B6Ti82PPqKOp9ggDy/EVPTFNRrgY41_sdf.bin',
-                                shapeType: '',
-                                thickness: 0.14,
-                                visible: true,
-                            },
-                        },
-                    ],
+                    },
+                ],
             };
 
             let shader = null;
