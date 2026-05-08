@@ -7,7 +7,14 @@
 # 音频数据集
 data/raw
 
+# 音频数据集训练用的 30 秒波形 NumPy 数组缓存
+data/waveform_cache_30s/
+data/raw.zip
+
+# 毕业设计文档
 （已压缩）Gemini-毕业设计_9-419.pdf
+
+# VSCode 配置
 .vscode/settings.json
 
 # Python 字节码缓存（所有版本）
@@ -15,9 +22,37 @@ __pycache__/
 *.pyc
 *.pyo
 
+# IDE 配置
 .idea/
+
+# 数据库文件
 music_hash.db
+
+# 模型权重：默认忽略训练中间产物，只保留 V1/V2/V3 最佳权重
+checkpoints/*
+!checkpoints/hash_model_v1_epoch_15_best.pth
+!checkpoints/hash_model_v2_epoch_10_best.pth
+!checkpoints/hash_model_v3_epoch_9_best.pth
+
+# 实验日志：默认忽略，只保留论文/答辩关键结果日志
+logs/*
+!logs/diag_v2_final.log
+!logs/e2e_v2_final_n10.log
+!logs/rebuild_v2_final.log
+!logs/diag_v3.log
+!logs/e2e_v3.log
+!logs/e2e_v3_n10.log
+!logs/rebuild_v3.log
+!logs/select_v3.log
+
+# 文档备份
 (完整版)音乐音频相似度检索系统_技术架构与实现分析_副本.md
+docs/(完整版)音乐音频相似度检索系统_技术架构与实现分析.md
+docs/中期检查报告.md
+docs/现有项目的总结.md
+
+# 临时测试脚本
+_test_cross_song_hamming.py
 
 # Docker 离线依赖包（仅部署时使用，不入库）
 wheels/

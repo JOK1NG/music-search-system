@@ -29,15 +29,16 @@ class AudioHashNet(nn.Module):
             nn.AdaptiveAvgPool2d((4, 4))
         )
 
-        # 👑 终极输出层
+        # 👑 终极输出层：保留 fc 容器名以兼容旧 checkpoint（fc.1.* = Linear）
+        # 去掉 nn.Tanh()（无参数）迁移到 forward，让训练时能退火 β·tanh(βz)
         self.fc = nn.Sequential(
-            nn.Dropout(p=0.5),  # 猛药：随机让一半神经元失忆，防止它死记硬背！
-            nn.Linear(256 * 4 * 4, hash_length),
-            nn.Tanh()
+            nn.Dropout(p=0.5),                  # fc.0
+            nn.Linear(256 * 4 * 4, hash_length) # fc.1
         )
 
-    def forward(self, x):
+    def forward(self, x, beta: float = 1.0):
+        """beta=1.0 → 标准 Tanh（推理默认）；训练时逐步退火到 ~10 逼近 sign。"""
         x = self.features(x)
         x = x.view(x.size(0), -1)
-        x = self.fc(x)
-        return x
+        z = self.fc(x)
+        return torch.tanh(beta * z)

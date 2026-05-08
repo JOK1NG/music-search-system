@@ -52,11 +52,24 @@ python precompute_cache.py
 
 ### 3. 模型训练与造数据 (算法迭代运行)
 
-训练 CNN 深度哈希模型（生成权重至 `checkpoints/`），默认调优超参数 `lr=1e-5`, `margin=5.0`：
+训练 CNN 深度哈希模型（生成权重至 `checkpoints/`）。当前生产部署使用的是 **V2 权重 `hash_model_v2_epoch_10_best.pth`**（见 `config.py` 的 `MODEL_PATH`）。V2 配方为反哈希坍塌的最佳实测组合：
+
+- 学习率 `lr=1e-4`、`Adam` 优化器、`CosineAnnealingLR` 调度
+- `epoch=10`、`batch=128`、`drop_last=True`（hard negative mining 需要 batch 不变）
+- Triplet 损失 `margin=6.0`，叠加：
+  - 量化损失 `Lq = (|h|-1)²`，权重 `LAMBDA_QUANT=0.1`（驱 Tanh 输出靠近 ±1）
+  - 位平衡损失 `Lb = (mean_b h)²`，权重 `LAMBDA_BAL=0.15`（驱每位 0/1 均衡）
+  - in-batch hard negative mining + easy/hard 加权 `ALPHA_EASY=0.3`
+- 输出激活退火 `β·tanh(βz)`，β 从 `1.0` 线性升到 **`4.0`**（V2 终点；V1=10 过激、V3=6 折中）
+- 数据流：anchor **不**增强、positive/negative 走"随机时移 5s + 随机增益 + 轻噪 + SpecAugment"，从根上避免 anchor/positive 同时漂移导致空间坍塌
+
+实测离线诊断指标（V2）：`same-song≈16.9 bit / cross-song≈61.7 bit / bit-deviation≈0.079 / uniqueness≈94.9% / 跨歌碰撞码 706 个`。
 
 ```bash
 python train.py
 ```
+
+> ⚠️ 当前 `train.py` 的常量已经迭代到 v3 实验配方（`MARGIN=7.0 / LAMBDA_BAL=0.10 / BETA_END=6.0`）。**生产权重仍是 V2**；如需复刻 V2，把对应常量改回上面 V2 的数值后再训。`select_best_epoch.py`、`evaluate_collapse.py` 可对任一 epoch 做不重建索引的快速评估与离线诊断。
 
 快速构造带背景噪音的测试音频（用于验证模型抗噪能力）：
 

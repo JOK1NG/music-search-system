@@ -12,9 +12,9 @@ import numpy as np
 import librosa
 
 RAW_PATH = "./data/raw"
-CACHE_PATH = "./data/waveform_cache"
+CACHE_PATH = "./data/waveform_cache_30s"  # 🌟 与升级后的 dataset.py 对齐（随机切窗 30s 训练）
 SR = 22050
-DURATION = 5.0
+DURATION = 30.0  # 训练需要 30s 全段，才能在中间随机抽 5s 起点
 
 
 def precompute():

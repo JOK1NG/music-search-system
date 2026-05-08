@@ -1,0 +1,21 @@
+# =====================================================================
+# 训练机专用依赖（GPU 版 PyTorch）
+# =====================================================================
+# 仅在本地训练 / 微调模型时使用，配合 NVIDIA 显卡 + CUDA 12.x 驱动。
+# 生产服务器（2c4G 无显卡）走 Dockerfile + wheels/ 目录离线安装（pip
+# install --no-index --find-links=/tmp/wheels/），根本不会读这个文件，
+# 两边互不影响——主 requirements.txt 也不含任何 GPU 依赖。
+#
+# 已验证组合：
+#   - GPU: RTX 4080, Driver 595.97 (driver-CUDA 13.2)
+#   - torch: 2.6.0+cu124 (PyTorch 官方稳定 wheel; 代码使用基础 API,
+#     与 PyPI 上的 torch 2.11+cpu 行为兼容, 训练完的 .pth 权重
+#     可直接被服务器 CPU torch 加载推理)
+#
+# 安装：
+#   pip install -r requirements-train.txt
+# 或单独装 torch：
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+# =====================================================================
+--index-url https://download.pytorch.org/whl/cu124
+torch
