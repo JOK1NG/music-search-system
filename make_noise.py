@@ -1,7 +1,10 @@
+import os
+
+import _utf8_console  # noqa: F401  强制 stdout/stderr 走 UTF-8，规避 Windows cp936 重定向丢字符（详见模块内注释）
+
 import librosa
 import numpy as np
 import soundfile as sf
-import os
 
 # 1. 读取原版完美音频
 original_path = "./data/raw/000/000002.mp3"  # 确保这个路径是对的

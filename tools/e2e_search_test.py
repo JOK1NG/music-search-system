@@ -15,7 +15,15 @@
 import argparse
 import os
 import random
+import sys
 import time
+
+# 强制 stdout/stderr 走 UTF-8，规避 Windows PowerShell cp936 重定向时把 `7994` 这类
+# 数字吞成 `?994` 的灾难。POSIX 平台默认就是 UTF-8，此调用为 no-op。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 import requests
 

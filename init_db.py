@@ -1,7 +1,10 @@
+import os
+
+import _utf8_console  # noqa: F401  强制 stdout/stderr 走 UTF-8，规避 Windows cp936 重定向丢字符（详见模块内注释）
+
 import sqlite3
 import numpy as np
 from tinytag import TinyTag
-import os
 
 # 1. 路径配置
 MAP_PATH = "./data/processed/file_mapping.npy"
