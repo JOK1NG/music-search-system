@@ -1,5 +1,13 @@
 import os
 
+# 本地开发时自动从项目根目录的 .env 加载环境变量。
+# 生产 Docker 通过 docker-compose.yml 的 env_file 注入，dotenv 不会覆盖已有值（override=False）。
+try:
+    from dotenv import load_dotenv
+    load_dotenv(override=False)
+except ImportError:
+    pass
+
 
 DB_PATH = os.environ.get("DB_PATH", "music_hash.db")
 INDEX_PATH = os.environ.get("INDEX_PATH", "music_hash.index")

@@ -10,3 +10,4 @@ faiss-cpu
 tinytag
 soundfile
 python-multipart
+python-dotenv
