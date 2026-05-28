@@ -46,10 +46,7 @@ logs/*
 !logs/select_v3.log
 
 # 文档备份
-(完整版)音乐音频相似度检索系统_技术架构与实现分析_副本.md
-docs/(完整版)音乐音频相似度检索系统_技术架构与实现分析.md
-docs/中期检查报告.md
-docs/现有项目的总结.md
+docs/
 
 # 临时测试脚本
 _test_cross_song_hamming.py
