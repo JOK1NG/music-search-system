@@ -71,7 +71,7 @@ def search_music(test_audio_path, index, model, top_k=TOP_K, top_n_results=TOP_N
         list[dict]，长度 ≤ top_n_results；每项含 rank/title/artist/distance/file_path/audio_url
     """
     # ==========================================
-    # 🌟 第一步：音频预处理 (素颜状态，不加特效，与建库绝对一致)
+    # 🌟 第一步：音频预处理 (与建库绝对一致)
     # ==========================================
     # sr=22050：与 batch_extract.py 完全一致，重采样保证频域特征对齐
     # duration=15.0：只取前 15 秒，控制最大计算量并避免长音频拖慢响应
@@ -87,7 +87,7 @@ def search_music(test_audio_path, index, model, top_k=TOP_K, top_n_results=TOP_N
     device = next(model.parameters()).device
 
     # ==========================================
-    # 🌟 第二步：能量选秀！只取声音最饱满的前3个切片
+    # 🌟 第二步：能量选秀--只取声音最饱满的前3个切片
     # ==========================================
     # 设计动机：音频开头/结尾常含静音、淡入淡出，直接拿首段切片做查询很容易撞库失败。
     # 这里以 1s 为步长滑动取若干 5s 窗，按 RMS（均方根值（Root Mean Square））能量降序排序，挑能量最高的 Top 3 当查询，
